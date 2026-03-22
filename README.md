@@ -23,7 +23,8 @@ Das statische Frontend liegt im **Repository-Root** (`index.html`, `css/`, `js/`
 
 1. **Settings → Pages → Build and deployment**
 2. Quelle **Deploy from a branch**
-3. Branch **`main`**, Ordner **`/ (root)`**
+3. Branch **`main`**, Ordner **`/ (root)`** **oder** **`/docs`**
+   - **`/docs`:** Im Repo liegt ein **Spiegel** der gleichen Dateien wie im Root (für ältere Einstellungen, die noch auf `docs/` zeigen). **Empfehlung:** auf **`/ (root)`** umstellen und den Ordner `docs/` langfristig wieder entfernen, damit es nur **eine** Quelle gibt.
 
 ### Variante B: GitHub Actions (empfohlen, wenn der Standard-Workflow fehlschlägt)
 
