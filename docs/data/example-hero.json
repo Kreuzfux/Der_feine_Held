@@ -1,0 +1,54 @@
+{
+  "id": "beispiel-001-dsa4",
+  "version": 1,
+  "stammdaten": {
+    "name": "Elgor von Weiden",
+    "rasse": "Mensch",
+    "geschlecht": "männlich",
+    "profession": "Krieger",
+    "stand": "Bürgerlicher Sohn",
+    "gp": 110,
+    "groesse": 182,
+    "gewicht": "85 Stein",
+    "alter": "24 Jahre",
+    "haarfarbe": "dunkelblond",
+    "augenfarbe": "grün"
+  },
+  "eigenschaften": {
+    "MU": 13,
+    "KL": 11,
+    "IN": 12,
+    "CH": 10,
+    "FF": 11,
+    "GE": 13,
+    "KO": 14,
+    "KK": 12
+  },
+  "kampf": {
+    "at": 12,
+    "pa": 10,
+    "wk": "Schwerter 8",
+    "rs": 4,
+    "bewegung": 2,
+    "ini": 0
+  },
+  "energien": {
+    "leAktuell": 60,
+    "leMax": 60,
+    "aeAktuell": 0,
+    "aeMax": 0,
+    "auAktuell": 41,
+    "auMax": 41
+  },
+  "talente": [
+    { "name": "Athletik", "probe": "GE/KO/KK", "wert": 4 },
+    { "name": "Schwimmen", "probe": "GE/KO/KK", "wert": 3 },
+    { "name": "Menschenkenntnis", "probe": "KL/IN/CH", "wert": 2 }
+  ],
+  "inventar": [
+    { "name": "Breitschwert", "anzahl": 1, "gewicht": "1,2 Stein" },
+    { "name": "Lederrüstung", "anzahl": 1, "gewicht": "2 Stein" },
+    { "name": "Rucksack mit Proviant", "anzahl": 1, "gewicht": "" }
+  ],
+  "notizen": "Beispielcharakter für DSA 4.0 – Werte fiktiv, zum Testen von Import und UI."
+}

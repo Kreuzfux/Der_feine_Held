@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Digitaler Heldenbogen für Das Schwarze Auge 4.0 – Erfassung, OCR und lokale Speicherung" />
+  <title>Der feine Held – DSA 4.0 Heldenbogen</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Tesseract.js für OCR (CDN, funktioniert auf GitHub Pages) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
+  <script src="js/script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">⚔</span>
+      <div>
+        <h1>Der feine Held</h1>
+        <p class="tagline">DSA 4.0 – digitaler Heldenbogen</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <label class="api-toggle">
+        <input type="checkbox" id="useBackendApi" />
+        <span>Express-API nutzen</span>
+      </label>
+      <input type="url" id="apiBaseUrl" class="api-url" placeholder="http://localhost:3000" value="http://localhost:3000" title="Basis-URL des optionalen Backends" />
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- Charakterliste -->
+    <aside class="sidebar" aria-label="Charaktere">
+      <div class="sidebar-head">
+        <h2>Helden</h2>
+        <button type="button" id="btnNewHero" class="btn btn-primary">Neu</button>
+      </div>
+      <ul id="characterList" class="character-list"></ul>
+      <div class="sidebar-foot">
+        <button type="button" id="btnDuplicateHero" class="btn btn-ghost">Duplizieren</button>
+        <button type="button" id="btnDeleteHero" class="btn btn-danger">Löschen</button>
+      </div>
+    </aside>
+
+    <main id="main-content" class="main">
+      <!-- Datei-Aktionen -->
+      <section class="panel panel-toolbar">
+        <h2 class="panel-title">Dateien &amp; OCR</h2>
+        <div class="toolbar-grid">
+          <div class="field-group">
+            <label for="imageUpload">Heldenbogen-Scan / Foto</label>
+            <input type="file" id="imageUpload" accept="image/*" />
+          </div>
+          <div class="preview-wrap">
+            <img id="uploadPreview" alt="Vorschau des hochgeladenen Bildes" hidden />
+            <span id="uploadPlaceholder" class="placeholder-text">Kein Bild gewählt</span>
+          </div>
+          <div class="btn-row">
+            <button type="button" id="btnRunOcr" class="btn btn-accent" disabled>OCR starten</button>
+            <button type="button" id="btnClearImage" class="btn btn-ghost">Bild entfernen</button>
+          </div>
+          <div id="ocrStatus" class="ocr-status" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <form id="heroForm" class="sheet-form" autocomplete="off">
+        <!-- Stammdaten -->
+        <section class="panel sheet-block">
+          <h2 class="panel-title sheet-title">Stammdaten</h2>
+          <div class="grid-2">
+            <div class="field-group">
+              <label for="name">Name</label>
+              <input type="text" id="name" name="name" maxlength="120" />
+            </div>
+            <div class="field-group">
+              <label for="rasse">Rasse / Spezies</label>
+              <input type="text" id="rasse" name="rasse" maxlength="80" />
+            </div>
+            <div class="field-group">
+              <label for="geschlecht">Geschlecht</label>
+              <input type="text" id="geschlecht" name="geschlecht" maxlength="40" />
+            </div>
+            <div class="field-group">
+              <label for="profession">Profession / Archetyp</label>
+              <input type="text" id="profession" name="profession" maxlength="120" />
+            </div>
+            <div class="field-group">
+              <label for="stand">Stand / Herkunft</label>
+              <input type="text" id="stand" name="stand" maxlength="120" />
+            </div>
+            <div class="field-group">
+              <label for="gp">Generierungspunkte (GP)</label>
+              <input type="number" id="gp" name="gp" min="0" max="9999" step="1" />
+            </div>
+            <div class="field-group">
+              <label for="groesse">Größe (cm)</label>
+              <input type="number" id="groesse" name="groesse" min="0" max="400" step="1" />
+            </div>
+            <div class="field-group">
+              <label for="gewicht">Gewicht</label>
+              <input type="text" id="gewicht" name="gewicht" maxlength="40" />
+            </div>
+            <div class="field-group">
+              <label for="alter">Alter</label>
+              <input type="text" id="alter" name="alter" maxlength="40" />
+            </div>
+            <div class="field-group">
+              <label for="haarfarbe">Haarfarbe</label>
+              <input type="text" id="haarfarbe" name="haarfarbe" maxlength="60" />
+            </div>
+            <div class="field-group">
+              <label for="augenfarbe">Augenfarbe</label>
+              <input type="text" id="augenfarbe" name="augenfarbe" maxlength="60" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Eigenschaften -->
+        <section class="panel sheet-block">
+          <h2 class="panel-title sheet-title">Eigenschaften</h2>
+          <p class="hint">Werte typisch 1–25 (Menschen oft 8–14). Abgeleitete Werte werden automatisch berechnet.</p>
+          <div class="attrs-grid" id="attrsContainer">
+            <!-- per JS: MU, KL, IN, CH, FF, GE, KO, KK -->
+          </div>
+          <div id="validationEigenschaften" class="validation-msg" role="alert"></div>
+        </section>
+
+        <!-- Abgeleitete & Kampf -->
+        <section class="panel sheet-block">
+          <h2 class="panel-title sheet-title">Abgeleitete Werte &amp; Kampf</h2>
+          <div class="derived-grid">
+            <div class="derived-card">
+              <h3>Berechnet (DSA 4.0 üblich)</h3>
+              <dl class="derived-list">
+                <dt>AT-Basis (Nahkampf)</dt><dd><span id="derivedAtBasis">–</span></dd>
+                <dt>PA-Basis</dt><dd><span id="derivedPaBasis">–</span></dd>
+                <dt>Fernkampf-Basis</dt><dd><span id="derivedFkBasis">–</span></dd>
+                <dt>Zaubern (Basis)</dt><dd><span id="derivedZfBasis">–</span></dd>
+                <dt>MR (Basis)</dt><dd><span id="derivedMr">–</span></dd>
+                <dt>Ausdauer max. (AU)</dt><dd><span id="derivedAuMax">–</span></dd>
+                <dt>LE (Vorschlag Mensch)</dt><dd><span id="derivedLeSuggestion">–</span></dd>
+              </dl>
+            </div>
+            <div class="kampf-inputs">
+              <h3>Kampfwerte (vom Bogen / Spiel)</h3>
+              <div class="grid-3">
+                <div class="field-group">
+                  <label for="at">AT (aktuell)</label>
+                  <input type="number" id="at" name="at" min="-99" max="99" step="1" />
+                </div>
+                <div class="field-group">
+                  <label for="pa">PA (aktuell)</label>
+                  <input type="number" id="pa" name="pa" min="-99" max="99" step="1" />
+                </div>
+                <div class="field-group">
+                  <label for="wk">Waffenkunde / Modifikatoren</label>
+                  <input type="text" id="wk" name="wk" maxlength="80" />
+                </div>
+                <div class="field-group">
+                  <label for="rs">Rüstungsschutz (RS)</label>
+                  <input type="number" id="rs" name="rs" min="0" max="30" step="1" />
+                </div>
+                <div class="field-group">
+                  <label for="bewegung">BE (Belastung)</label>
+                  <input type="number" id="bewegung" name="bewegung" min="0" max="20" step="1" />
+                </div>
+                <div class="field-group">
+                  <label for="ini">INI-Bonus</label>
+                  <input type="number" id="ini" name="ini" min="-99" max="99" step="1" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="validationKampf" class="validation-msg" role="alert"></div>
+        </section>
+
+        <!-- LE / AE / AU -->
+        <section class="panel sheet-block">
+          <h2 class="panel-title sheet-title">Energien</h2>
+          <div class="grid-3">
+            <div class="field-group">
+              <label for="leAktuell">LE aktuell</label>
+              <input type="number" id="leAktuell" name="leAktuell" min="0" max="999" step="1" />
+            </div>
+            <div class="field-group">
+              <label for="leMax">LE max.</label>
+              <input type="number" id="leMax" name="leMax" min="0" max="999" step="1" />
+            </div>
+            <div class="field-group">
+              <label for="aeAktuell">AE / Karma aktuell</label>
+              <input type="number" id="aeAktuell" name="aeAktuell" min="0" max="999" step="1" />
+            </div>
+            <div class="field-group">
+              <label for="aeMax">AE / Karma max.</label>
+              <input type="number" id="aeMax" name="aeMax" min="0" max="999" step="1" />
+            </div>
+            <div class="field-group">
+              <label for="auAktuell">AU aktuell</label>
+              <input type="number" id="auAktuell" name="auAktuell" min="0" max="999" step="1" />
+            </div>
+            <div class="field-group">
+              <label for="auMax">AU max.</label>
+              <input type="number" id="auMax" name="auMax" min="0" max="999" step="1" />
+            </div>
+          </div>
+          <div id="validationEnergien" class="validation-msg" role="alert"></div>
+        </section>
+
+        <!-- Talente -->
+        <section class="panel sheet-block">
+          <div class="section-head">
+            <h2 class="panel-title sheet-title">Talente &amp; Fertigkeiten</h2>
+            <button type="button" id="btnAddTalent" class="btn btn-ghost btn-sm">Zeile hinzufügen</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="talentsTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Probe (Eigenschaften)</th>
+                  <th>Wert</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="talentsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Inventar -->
+        <section class="panel sheet-block">
+          <div class="section-head">
+            <h2 class="panel-title sheet-title">Inventar</h2>
+            <button type="button" id="btnAddItem" class="btn btn-ghost btn-sm">Gegenstand</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="inventoryTable">
+              <thead>
+                <tr>
+                  <th>Bezeichnung</th>
+                  <th>Anzahl</th>
+                  <th>Gewicht / Notiz</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="inventoryBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Notizen -->
+        <section class="panel sheet-block">
+          <h2 class="panel-title sheet-title">Notizen</h2>
+          <div class="field-group">
+            <label for="notizen" class="visually-hidden">Notizen</label>
+            <textarea id="notizen" name="notizen" rows="5" maxlength="8000" placeholder="Abenteuer, Sonderregeln, Spielnotizen …"></textarea>
+          </div>
+        </section>
+
+        <!-- Speichern -->
+        <section class="panel panel-actions">
+          <button type="submit" class="btn btn-primary">Im Browser speichern</button>
+          <button type="button" id="btnExportJson" class="btn btn-ghost">Held exportieren</button>
+          <button type="button" id="btnExportAllJson" class="btn btn-ghost">Alle Helden exportieren</button>
+          <label class="btn btn-ghost file-import-label">
+            JSON importieren
+            <input type="file" id="importJson" accept="application/json,.json" hidden />
+          </label>
+          <button type="button" id="btnSaveApi" class="btn btn-accent" title="Nur wenn Backend aktiv">Über API speichern</button>
+        </section>
+      </form>
+    </main>
+  </div>
+
+  <!-- Modal: OCR-Korrektur -->
+  <div id="ocrModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="ocrModalTitle" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card">
+      <header class="modal-head">
+        <h2 id="ocrModalTitle">OCR – erkannte Werte prüfen</h2>
+        <button type="button" class="modal-close" data-close-modal aria-label="Schließen">×</button>
+      </header>
+      <p class="modal-hint">Passe die Zuordnung an und wähle, welche Felder übernommen werden sollen.</p>
+      <div class="modal-body">
+        <div id="ocrRawPreview" class="ocr-raw" aria-label="Rohtext"></div>
+        <table class="data-table ocr-map-table">
+          <thead>
+            <tr>
+              <th>Feld</th>
+              <th>Erkannt</th>
+              <th>Übernehmen</th>
+            </tr>
+          </thead>
+          <tbody id="ocrMapBody"></tbody>
+        </table>
+      </div>
+      <footer class="modal-foot">
+        <button type="button" id="ocrApplySelected" class="btn btn-primary">Ausgewählte übernehmen</button>
+        <button type="button" class="btn btn-ghost" data-close-modal>Abbrechen</button>
+      </footer>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Kein offizielles DSA-Produkt. Regelhinweise nach gängiger DSA-4.0-Praxis; Hausregeln möglich.</p>
+  </footer>
+</body>
+</html>
