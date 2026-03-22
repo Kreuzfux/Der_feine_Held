@@ -17,15 +17,15 @@ Webbasiertes Tool zur digitalen Erfassung von Heldenbögen für **Das Schwarze A
 
 ## GitHub Pages (Frontend-only)
 
-Das statische Frontend liegt unter **`docs/`** und ist **ohne Backend** voll nutzbar (Speicherung im Browser).
+Das statische Frontend liegt im **Repository-Root** (`index.html`, `css/`, `js/`, `data/`) und ist **ohne Backend** voll nutzbar (Speicherung im Browser).
 
-1. Repository auf GitHub anlegen und diesen Ordner pushen.
-2. Im Repository: **Settings → Pages**.
-3. Unter **Build and deployment**: Quelle **Deploy from a branch**.
-4. Branch **main** (oder `master`), Ordner **`/docs`**, speichern.
-5. Nach dem Build ist die App unter `https://<dein-name>.github.io/<repo-name>/` erreichbar (URL je nach Benutzer-/Repo-Namen).
+1. Repository auf GitHub pushen.
+2. **Settings → Pages**.
+3. **Build and deployment**: Quelle **Deploy from a branch**.
+4. Branch **`main`**, Ordner **`/ (root)`**, speichern.
+5. Nach dem Build: `https://<dein-name>.github.io/<repo-name>/` (exakte URL steht auf der Pages-Seite).
 
-**Pfade:** `index.html` referenziert `css/style.css` und `js/script.js` relativ – das funktioniert auf GitHub Pages, solange die Site aus `docs/` ausgeliefert wird.
+Die leere Datei **`.nojekyll`** im Root verhindert, dass GitHub Pages die Site mit Jekyll verarbeitet (reines statisches HTML bleibt stabil).
 
 **OCR:** Tesseract.js wird per **jsDelivr-CDN** geladen; eine Internetverbindung ist für die erste Erkennung nötig.
 
@@ -43,16 +43,16 @@ npm start
 
 ## Beispiel-Held
 
-Die Datei [`docs/data/example-hero.json`](docs/data/example-hero.json) kann über **JSON importieren** geladen werden.
+Die Datei [`data/example-hero.json`](data/example-hero.json) kann über **JSON importieren** geladen werden.
 
 ## Projektstruktur
 
 ```
-docs/                 → GitHub Pages (statisches Frontend)
-  index.html
-  css/style.css
-  js/script.js
-  data/example-hero.json
+index.html            → Einstieg (GitHub Pages aus Root)
+css/style.css
+js/script.js
+data/example-hero.json
+.nojekyll             → Jekyll für Pages deaktivieren
 server/               → optionale REST-API
   server.js
   package.json
