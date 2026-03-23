@@ -69,9 +69,9 @@
       </section>
 
       <form id="heroForm" class="sheet-form" autocomplete="off">
-        <!-- Stammdaten -->
+        <!-- Helden Stammdaten -->
         <section class="panel sheet-block">
-          <h2 class="panel-title sheet-title">Stammdaten</h2>
+          <h2 class="panel-title sheet-title">Helden Stammdaten</h2>
           <div class="grid-2">
             <div class="field-group">
               <label for="name">Name</label>
@@ -199,10 +199,10 @@
           <div id="validationEnergien" class="validation-msg" role="alert"></div>
         </section>
 
-        <!-- Talente -->
+        <!-- Talent Daten -->
         <section class="panel sheet-block">
           <div class="section-head">
-            <h2 class="panel-title sheet-title">Talente &amp; Fertigkeiten</h2>
+            <h2 class="panel-title sheet-title">Talent Daten</h2>
             <button type="button" id="btnAddTalent" class="btn btn-ghost btn-sm">Zeile hinzufügen</button>
           </div>
           <div class="table-wrap">
@@ -216,6 +216,48 @@
                 </tr>
               </thead>
               <tbody id="talentsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Zauberei Daten -->
+        <section class="panel sheet-block">
+          <div class="section-head">
+            <h2 class="panel-title sheet-title">Zauberei Daten</h2>
+            <button type="button" id="btnAddSpell" class="btn btn-ghost btn-sm">Zauber</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="spellsTable">
+              <thead>
+                <tr>
+                  <th>Zauber</th>
+                  <th>Merkmal / Repräsentation</th>
+                  <th>ZfW</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="spellsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Runen Daten -->
+        <section class="panel sheet-block">
+          <div class="section-head">
+            <h2 class="panel-title sheet-title">Runen Daten</h2>
+            <button type="button" id="btnAddRune" class="btn btn-ghost btn-sm">Rune</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="runesTable">
+              <thead>
+                <tr>
+                  <th>Rune</th>
+                  <th>Typ / Effekt</th>
+                  <th>Stufe</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="runesBody"></tbody>
             </table>
           </div>
         </section>

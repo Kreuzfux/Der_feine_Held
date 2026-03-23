@@ -46,6 +46,8 @@
   const ocrStatus = el('ocrStatus');
   const attrsContainer = el('attrsContainer');
   const talentsBody = el('talentsBody');
+  const spellsBody = el('spellsBody');
+  const runesBody = el('runesBody');
   const inventoryBody = el('inventoryBody');
   const ocrModal = el('ocrModal');
   const ocrRawPreview = el('ocrRawPreview');
@@ -160,6 +162,8 @@
         auMax: null,
       },
       talente: [],
+      zauberei: [],
+      runen: [],
       inventar: [],
       notizen: '',
     };
@@ -212,6 +216,16 @@
       name: String(t.name || ''),
       probe: String(t.probe || ''),
       wert: numOrNull(t.wert),
+    })) : [];
+    h.zauberei = Array.isArray(raw.zauberei) ? raw.zauberei.map((z) => ({
+      name: String(z.name || ''),
+      merkmal: String(z.merkmal || ''),
+      wert: numOrNull(z.wert),
+    })) : [];
+    h.runen = Array.isArray(raw.runen) ? raw.runen.map((r) => ({
+      name: String(r.name || ''),
+      typ: String(r.typ || ''),
+      stufe: numOrNull(r.stufe),
     })) : [];
     h.inventar = Array.isArray(raw.inventar) ? raw.inventar.map((i) => ({
       name: String(i.name || ''),
@@ -387,6 +401,8 @@
     el('notizen').value = h.notizen || '';
 
     renderTalentsTable(h.talente);
+    renderSpellsTable(h.zauberei);
+    renderRunesTable(h.runen);
     renderInventoryTable(h.inventar);
   }
 
@@ -423,6 +439,8 @@
 
     h.notizen = el('notizen').value;
     h.talente = readTalentsFromTable();
+    h.zauberei = readSpellsFromTable();
+    h.runen = readRunesFromTable();
     h.inventar = readInventoryFromTable();
     return h;
   }
@@ -466,6 +484,80 @@
       const probe = tr.querySelector('.tal-probe')?.value.trim() || '';
       const wert = numOrNull(tr.querySelector('.tal-wert')?.value);
       if (name || probe || wert != null) out.push({ name, probe, wert });
+    });
+    return out;
+  }
+
+  function renderSpellsTable(rows) {
+    spellsBody.innerHTML = '';
+    const data = rows.length ? rows : [{ name: '', merkmal: '', wert: null }];
+    data.forEach((row) => addSpellRow(row));
+  }
+
+  function addSpellRow(row) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="spl-name" placeholder="z. B. Fulminictus" value="${escapeAttr(row.name)}" /></td>
+      <td><input type="text" class="spl-merkmal" placeholder="Schaden / Gildenmagie" value="${escapeAttr(row.merkmal)}" /></td>
+      <td><input type="number" class="spl-wert" min="0" max="25" step="1" value="${row.wert != null ? row.wert : ''}" /></td>
+      <td><button type="button" class="btn btn-ghost btn-icon btn-remove-spl" aria-label="Zeile entfernen">✕</button></td>
+    `;
+    tr.querySelector('.btn-remove-spl').addEventListener('click', () => {
+      if (spellsBody.querySelectorAll('tr').length <= 1) {
+        tr.querySelector('.spl-name').value = '';
+        tr.querySelector('.spl-merkmal').value = '';
+        tr.querySelector('.spl-wert').value = '';
+        return;
+      }
+      tr.remove();
+    });
+    spellsBody.appendChild(tr);
+  }
+
+  function readSpellsFromTable() {
+    const out = [];
+    spellsBody.querySelectorAll('tr').forEach((tr) => {
+      const name = tr.querySelector('.spl-name')?.value.trim() || '';
+      const merkmal = tr.querySelector('.spl-merkmal')?.value.trim() || '';
+      const wert = numOrNull(tr.querySelector('.spl-wert')?.value);
+      if (name || merkmal || wert != null) out.push({ name, merkmal, wert });
+    });
+    return out;
+  }
+
+  function renderRunesTable(rows) {
+    runesBody.innerHTML = '';
+    const data = rows.length ? rows : [{ name: '', typ: '', stufe: null }];
+    data.forEach((row) => addRuneRow(row));
+  }
+
+  function addRuneRow(row) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="run-name" placeholder="z. B. Schutzrune" value="${escapeAttr(row.name)}" /></td>
+      <td><input type="text" class="run-typ" placeholder="Abwehr / Buff" value="${escapeAttr(row.typ)}" /></td>
+      <td><input type="number" class="run-stufe" min="0" max="25" step="1" value="${row.stufe != null ? row.stufe : ''}" /></td>
+      <td><button type="button" class="btn btn-ghost btn-icon btn-remove-run" aria-label="Zeile entfernen">✕</button></td>
+    `;
+    tr.querySelector('.btn-remove-run').addEventListener('click', () => {
+      if (runesBody.querySelectorAll('tr').length <= 1) {
+        tr.querySelector('.run-name').value = '';
+        tr.querySelector('.run-typ').value = '';
+        tr.querySelector('.run-stufe').value = '';
+        return;
+      }
+      tr.remove();
+    });
+    runesBody.appendChild(tr);
+  }
+
+  function readRunesFromTable() {
+    const out = [];
+    runesBody.querySelectorAll('tr').forEach((tr) => {
+      const name = tr.querySelector('.run-name')?.value.trim() || '';
+      const typ = tr.querySelector('.run-typ')?.value.trim() || '';
+      const stufe = numOrNull(tr.querySelector('.run-stufe')?.value);
+      if (name || typ || stufe != null) out.push({ name, typ, stufe });
     });
     return out;
   }
@@ -675,6 +767,46 @@
       }
     }
 
+    // Strukturierte OCR-Zeilen für die neuen Bereiche:
+    // Talent: Athletik 7
+    // Zauber: Fulminictus 9
+    // Rune: Schutzrune 3
+    const lines = t.split('\n').map((x) => x.trim()).filter(Boolean);
+    let talentIdx = 0;
+    let spellIdx = 0;
+    let runeIdx = 0;
+
+    lines.forEach((line) => {
+      let m = line.match(/^(?:Talent|Tal\.?)\s*[:\-]\s*([A-Za-zÄÖÜäöüß0-9 \-\/]{2,})\s+(\d{1,2})$/i);
+      if (m) {
+        mappings.push({
+          key: `talent:${talentIdx++}`,
+          label: 'Talent Daten',
+          value: `${m[1].trim()}|${m[2]}`,
+        });
+        return;
+      }
+
+      m = line.match(/^(?:Zauber|Spruch|Ritual)\s*[:\-]\s*([A-Za-zÄÖÜäöüß0-9 \-\/]{2,})\s+(\d{1,2})$/i);
+      if (m) {
+        mappings.push({
+          key: `zauber:${spellIdx++}`,
+          label: 'Zauberei Daten',
+          value: `${m[1].trim()}|${m[2]}`,
+        });
+        return;
+      }
+
+      m = line.match(/^(?:Rune|Runen)\s*[:\-]\s*([A-Za-zÄÖÜäöüß0-9 \-\/]{2,})\s+(\d{1,2})$/i);
+      if (m) {
+        mappings.push({
+          key: `rune:${runeIdx++}`,
+          label: 'Runen Daten',
+          value: `${m[1].trim()}|${m[2]}`,
+        });
+      }
+    });
+
     return mappings;
   }
 
@@ -717,6 +849,15 @@
         if (node) node.value = val.replace(/\D/g, '').slice(0, 2) || '';
       } else if (key === 'name') {
         el('name').value = val;
+      } else if (key.startsWith('talent:')) {
+        const [name, wertStr] = val.split('|');
+        addTalentRow({ name: (name || '').trim(), probe: '', wert: numOrNull((wertStr || '').trim()) });
+      } else if (key.startsWith('zauber:')) {
+        const [name, wertStr] = val.split('|');
+        addSpellRow({ name: (name || '').trim(), merkmal: '', wert: numOrNull((wertStr || '').trim()) });
+      } else if (key.startsWith('rune:')) {
+        const [name, stufeStr] = val.split('|');
+        addRuneRow({ name: (name || '').trim(), typ: '', stufe: numOrNull((stufeStr || '').trim()) });
       } else if (key === 'at') el('at').value = val.replace(/[^\d-]/g, '').slice(0, 4);
       else if (key === 'pa') el('pa').value = val.replace(/[^\d-]/g, '').slice(0, 4);
       else if (key === 'rs') el('rs').value = val.replace(/\D/g, '').slice(0, 2);
@@ -1185,6 +1326,8 @@
     });
 
     el('btnAddTalent').addEventListener('click', () => addTalentRow({ name: '', probe: '', wert: null }));
+    el('btnAddSpell').addEventListener('click', () => addSpellRow({ name: '', merkmal: '', wert: null }));
+    el('btnAddRune').addEventListener('click', () => addRuneRow({ name: '', typ: '', stufe: null }));
     el('btnAddItem').addEventListener('click', () => addInventoryRow({ name: '', anzahl: 1, gewicht: '' }));
 
     imageUpload.addEventListener('change', () => {
