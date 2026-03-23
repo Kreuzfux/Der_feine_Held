@@ -10,7 +10,7 @@
   const SUPABASE_KEY = 'sb_publishable_B3S1bS6EYgZIDjf6bRJCAA_YgN9QGXz';
   // Admin-Zugriff über E-Mail-Whitelist (nach Bedarf erweitern).
   const ADMIN_EMAILS = [
-    // 'admin@example.com',
+    'nitzschkepa@yahoo.de',
   ];
   const AUTH_SESSION_KEY = 'dsa4_supabase_auth_session_v1';
 
