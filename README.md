@@ -33,38 +33,44 @@ Führe im Supabase SQL-Editor aus:
 ```sql
 create table if not exists public.heroes (
   id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
   data jsonb not null,
   updated_at timestamptz not null default now()
 );
 
 alter table public.heroes enable row level security;
 
-drop policy if exists "anon can read heroes" on public.heroes;
-drop policy if exists "anon can write heroes" on public.heroes;
-drop policy if exists "anon can update heroes" on public.heroes;
+-- Für bestehende Tabellen:
+alter table public.heroes add column if not exists user_id uuid;
+-- Optional: alte Datensätze ohne user_id vorher bereinigen/zuordnen.
+alter table public.heroes alter column user_id set not null;
 
-create policy "anon can read heroes"
+drop policy if exists "users can read own heroes" on public.heroes;
+drop policy if exists "users can insert own heroes" on public.heroes;
+drop policy if exists "users can update own heroes" on public.heroes;
+
+create policy "users can read own heroes"
 on public.heroes for select
-to anon
-using (true);
+to authenticated
+using (auth.uid() = user_id);
 
-create policy "anon can write heroes"
+create policy "users can insert own heroes"
 on public.heroes for insert
-to anon
-with check (true);
+to authenticated
+with check (auth.uid() = user_id);
 
-create policy "anon can update heroes"
+create policy "users can update own heroes"
 on public.heroes for update
-to anon
-using (true)
-with check (true);
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 ```
 
 Danach funktionieren die Buttons **Online speichern** und **Online laden**.
 
 ## Wichtiger Sicherheitshinweis
 
-Die Supabase-URL und der publishable Key sind aktuell **fest im Frontend-Code** hinterlegt (`js/script.js`). Das ist für einen Prototyp okay, aber nicht für sensible Produktionsdaten. Für härtere Sicherheit sollte Auth/RLS nutzerbezogen erweitert werden.
+Die Supabase-URL und der publishable Key sind aktuell **fest im Frontend-Code** hinterlegt (`js/script.js`). Das ist für einen Prototyp okay, aber nicht für sensible Produktionsdaten.
 
 ## Admin-Zugang
 
