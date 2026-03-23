@@ -62,6 +62,7 @@
   const authStatus = el('authStatus');
   const loginOnlyElements = Array.from(document.querySelectorAll('.auth-login-only'));
   const btnLoadAllOnline = el('btnLoadAllOnline');
+  const btnDeleteOnline = el('btnDeleteOnline');
   /** Letzte OCR-Zeile für Modal */
   let lastOcrMappings = [];
   /** @type {{ access_token?: string, refresh_token?: string, user?: { id?: string, email?: string } } | null} */
@@ -120,6 +121,8 @@
       node.hidden = loggedIn;
     });
     btnLoadAllOnline.hidden = !admin;
+    btnDeleteOnline.hidden = !admin;
+    btnDeleteOnline.disabled = !admin || !loggedIn;
   }
 
   function isAdmin() {
@@ -1203,6 +1206,58 @@
     }
   }
 
+  async function deleteCurrentHeroFromSupabase() {
+    const cfg = getSupabaseConfig();
+    if (!cfg) {
+      alert('Supabase-Konfiguration fehlt.');
+      return;
+    }
+    if (!isAdmin() || !authSession?.access_token) {
+      alert('Admin-Zugriff erforderlich.');
+      return;
+    }
+    const h = getCurrentHero();
+    if (!h?.id) {
+      alert('Kein Held ausgewählt.');
+      return;
+    }
+    const name = h?.stammdaten?.name || '(Unbenannt)';
+    if (!confirm(`Diesen Online-Helden wirklich löschen?\n${name}`)) return;
+
+    try {
+      const res = await fetch(
+        `${cfg.url}/rest/v1/heroes?id=eq.${encodeURIComponent(h.id)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            ...getSupabaseHeaders(cfg.key, true, authSession.access_token),
+            Prefer: 'return=representation',
+          },
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+
+      characters = characters.filter((c) => c.id !== h.id);
+      if (!characters.length) {
+        characters = [createEmptyHero()];
+      }
+      currentId = characters[0].id;
+      heroToForm(getCurrentHero());
+      renderCharacterList();
+      updateDerivedDisplay();
+      renderValidation();
+      alert('Held online gelöscht.');
+    } catch (e) {
+      console.error(e);
+      const msg = String(e?.message || e || 'Unbekannter Fehler');
+      if (/401|403|permission|jwt|apikey/i.test(msg)) {
+        alert('Online-Löschen fehlgeschlagen: Zugriff verweigert. Prüfe RLS-Policies für DELETE.');
+      } else {
+        alert('Online-Löschen fehlgeschlagen: ' + msg);
+      }
+    }
+  }
+
   async function loadAllHeroesFromSupabase() {
     const cfg = getSupabaseConfig();
     if (!cfg) {
@@ -1423,6 +1478,7 @@
     el('btnSaveOnline').addEventListener('click', () => saveCurrentHeroToSupabase());
     el('btnLoadOnline').addEventListener('click', () => loadHeroesFromSupabase());
     btnLoadAllOnline.addEventListener('click', () => loadAllHeroesFromSupabase());
+    btnDeleteOnline.addEventListener('click', () => deleteCurrentHeroFromSupabase());
     btnSignUp.addEventListener('click', () => signUp());
     btnSignIn.addEventListener('click', () => signIn());
     btnSignOut.addEventListener('click', () => signOut());
