@@ -10,7 +10,7 @@
   const STORAGE_KEY = 'dsa4_helden_v1';
 
   /** Eigenschaftskürzel DSA 4.0 */
-  const ATTR_KEYS = ['MU', 'KL', 'IN', 'CH', 'FF', 'GE', 'KO', 'KK'];
+  const ATTR_KEYS = ['MU', 'KL', 'IN', 'CH', 'FF', 'GE', 'KK'];
 
   /** Langbezeichnungen für OCR / Anzeige */
   const ATTR_LABELS = {
@@ -20,7 +20,6 @@
     CH: 'Charisma',
     FF: 'Fingerfertigkeit',
     GE: 'Gewandtheit',
-    KO: 'Konstitution',
     KK: 'Körperkraft',
   };
 
@@ -69,7 +68,6 @@
         geschlecht: '',
         profession: '',
         stand: '',
-        sp: null,
         groesse: null,
         gewicht: '',
         alter: '',
@@ -83,7 +81,6 @@
         wk: '',
         rs: null,
         bewegung: null,
-        ini: null,
       },
       energien: {
         leAktuell: null,
@@ -115,8 +112,6 @@
       geschlecht: s.geschlecht ?? '',
       profession: s.profession ?? '',
       stand: s.stand ?? '',
-      // Rückwärtskompatibel: alte Exporte mit gp werden als sp übernommen.
-      sp: numOrNull(s.sp ?? s.gp ?? raw.sp ?? raw.gp),
       groesse: numOrNull(s.groesse ?? raw.groesse),
       gewicht: s.gewicht ?? '',
       alter: s.alter ?? '',
@@ -134,7 +129,6 @@
       wk: k.wk ?? raw.wk ?? '',
       rs: numOrNull(k.rs ?? raw.rs),
       bewegung: numOrNull(k.bewegung ?? k.be ?? raw.bewegung),
-      ini: numOrNull(k.ini ?? raw.ini),
     };
     const en = raw.energien || {};
     h.energien = {
@@ -212,7 +206,6 @@
     const ch = g('CH');
     const ff = g('FF');
     const ge = g('GE');
-    const ko = g('KO');
     const kk = g('KK');
 
     const teile5 = (a, b, c) => {
@@ -226,10 +219,7 @@
       fkBasis: teile5(inn, ff, kk),
       zfBasis: teile5(mu, inn, ch),
       mrBasis: teile5(mu, kl, ch),
-      /** AU-Maximum: 2×KO + GE (Standard DSA 4) */
-      auMax: ko != null && ge != null ? 2 * ko + ge : null,
-      /** LE-Vorschlag Mensch: 20 + 2×KO + KK (Grundwert, ohne Modifikatoren) */
-      leMensch: ko != null && kk != null ? 20 + 2 * ko + kk : null,
+      leMensch: null,
     };
   }
 
@@ -253,9 +243,6 @@
     }
     if (h.energien.leMax != null && d.leMensch != null && h.energien.leMax < d.leMensch - 10) {
       msgs.energien.push('LE max. deutlich unter LE-Vorschlag für Mensch – Rasse/Modifikatoren beachten.');
-    }
-    if (h.energien.auMax != null && d.auMax != null && h.energien.auMax !== d.auMax) {
-      msgs.energien.push('AU max. entspricht nicht 2×KO+GE – kann stimmig sein bei Sonderregeln.');
     }
     return msgs;
   }
@@ -286,8 +273,6 @@
     set('derivedFkBasis', d.fkBasis);
     set('derivedZfBasis', d.zfBasis);
     set('derivedMr', d.mrBasis);
-    set('derivedAuMax', d.auMax);
-    set('derivedLeSuggestion', d.leMensch);
   }
 
   /** Eigenschaftsfelder einmalig aufbauen */
@@ -339,7 +324,6 @@
     el('geschlecht').value = s.geschlecht || '';
     el('profession').value = s.profession || '';
     el('stand').value = s.stand || '';
-    el('sp').value = s.sp != null ? s.sp : '';
     el('groesse').value = s.groesse != null ? s.groesse : '';
     el('gewicht').value = s.gewicht || '';
     el('alter').value = s.alter || '';
@@ -356,7 +340,6 @@
     el('wk').value = h.kampf.wk || '';
     el('rs').value = h.kampf.rs != null ? h.kampf.rs : '';
     el('bewegung').value = h.kampf.bewegung != null ? h.kampf.bewegung : '';
-    el('ini').value = h.kampf.ini != null ? h.kampf.ini : '';
 
     el('leAktuell').value = h.energien.leAktuell != null ? h.energien.leAktuell : '';
     el('leMax').value = h.energien.leMax != null ? h.energien.leMax : '';
@@ -378,7 +361,6 @@
     h.stammdaten.geschlecht = el('geschlecht').value.trim();
     h.stammdaten.profession = el('profession').value.trim();
     h.stammdaten.stand = el('stand').value.trim();
-    h.stammdaten.sp = numOrNull(el('sp').value);
     h.stammdaten.groesse = numOrNull(el('groesse').value);
     h.stammdaten.gewicht = el('gewicht').value.trim();
     h.stammdaten.alter = el('alter').value.trim();
@@ -395,7 +377,6 @@
     h.kampf.wk = el('wk').value.trim();
     h.kampf.rs = numOrNull(el('rs').value);
     h.kampf.bewegung = numOrNull(el('bewegung').value);
-    h.kampf.ini = numOrNull(el('ini').value);
 
     h.energien.leAktuell = numOrNull(el('leAktuell').value);
     h.energien.leMax = numOrNull(el('leMax').value);
@@ -426,7 +407,7 @@
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input type="text" class="tal-name" placeholder="z. B. Athletik" value="${escapeAttr(row.name)}" /></td>
-      <td><input type="text" class="tal-probe" placeholder="GE/KO/KK" value="${escapeAttr(row.probe)}" /></td>
+      <td><input type="text" class="tal-probe" placeholder="GE/IN/KK" value="${escapeAttr(row.probe)}" /></td>
       <td><input type="number" class="tal-wert" min="0" max="25" step="1" value="${row.wert != null ? row.wert : ''}" /></td>
       <td><button type="button" class="btn btn-ghost btn-icon btn-remove-tal" aria-label="Zeile entfernen">✕</button></td>
     `;
@@ -517,7 +498,6 @@
       .replace(/\bB E\b/g, 'BE')
       .replace(/\bL E\b/g, 'LE')
       .replace(/\bA E\b/g, 'AE')
-      .replace(/\bK O\b/g, 'KO')
       .replace(/\bK K\b/g, 'KK')
       .replace(/\bG E\b/g, 'GE')
       .replace(/\bF F\b/g, 'FF');
@@ -624,7 +604,6 @@
       ['CH', 'Charisma', /(?:Charisma|CH)\b\s*[:.=]?\s*(\d{1,2})\b/i],
       ['FF', 'Fingerfertigkeit', /(?:Fingerfertigkeit|FF)\b\s*[:.=]?\s*(\d{1,2})\b/i],
       ['GE', 'Gewandtheit', /(?:Gewandtheit|GE)\b\s*[:.=]?\s*(\d{1,2})\b/i],
-      ['KO', 'Konstitution', /(?:Konstitution|KO)\b\s*[:.=]?\s*(\d{1,2})\b/i],
       ['KK', 'Körperkraft', /(?:Körperkraft|K[oö]rperkraft|KK)\b\s*[:.=]?\s*(\d{1,2})\b/i],
     ];
     attrRes.forEach(([key, label, re]) => tryMatch(key, label, re, oneLine));
@@ -635,21 +614,18 @@
     tryNearbyNumber('CH', 'Charisma', /\b(?:Charisma|CH)\b/i, 2);
     tryNearbyNumber('FF', 'Fingerfertigkeit', /\b(?:Fingerfertigkeit|FF)\b/i, 2);
     tryNearbyNumber('GE', 'Gewandtheit', /\b(?:Gewandtheit|GE)\b/i, 2);
-    tryNearbyNumber('KO', 'Konstitution', /\b(?:Konstitution|KO)\b/i, 2);
     tryNearbyNumber('KK', 'Körperkraft', /\b(?:K[oö]rperkraft|KK)\b/i, 2);
 
     tryMatch('at', 'AT (Angriff)', /\bAT\b\s*[:.=]?\s*(-?\d{1,2})\b/i, oneLine);
     tryMatch('pa', 'PA (Parade)', /\bPA\b\s*[:.=]?\s*(-?\d{1,2})\b/i, oneLine);
     tryMatch('rs', 'Rüstungsschutz RS', /\bRS\b\s*[:.=]?\s*(\d{1,2})\b/i, oneLine);
     tryMatch('bewegung', 'BE (Belastung)', /\bBE\b\s*[:.=]?\s*(\d{1,2})\b/i, oneLine);
-    tryMatch('ini', 'INI', /\bINI\b\s*[:.=]?\s*(-?\d{1,2})\b/i, oneLine);
     tryMatch('leMax', 'LE max.', /\b(?:LE|Lebensenergie)\b\s*[:.=]?\s*(\d{1,3})\b/i, oneLine);
     tryMatch('aeMax', 'AE max.', /\b(?:AE|Astralenergie)\b\s*[:.=]?\s*(\d{1,3})\b/i, oneLine);
     tryNearbyNumber('at', 'AT (Angriff)', /\bAT\b/i, 2);
     tryNearbyNumber('pa', 'PA (Parade)', /\bPA\b/i, 2);
     tryNearbyNumber('rs', 'Rüstungsschutz RS', /\bRS\b/i, 2);
     tryNearbyNumber('bewegung', 'BE (Belastung)', /\bBE\b/i, 2);
-    tryNearbyNumber('ini', 'INI', /\bINI\b/i, 2);
     tryNearbyNumber('leMax', 'LE max.', /\b(?:LE|Lebensenergie)\b/i, 3);
     tryNearbyNumber('aeMax', 'AE max.', /\b(?:AE|Astralenergie)\b/i, 3);
 
@@ -709,7 +685,6 @@
       else if (key === 'pa') el('pa').value = val.replace(/[^\d-]/g, '').slice(0, 4);
       else if (key === 'rs') el('rs').value = val.replace(/\D/g, '').slice(0, 2);
       else if (key === 'bewegung') el('bewegung').value = val.replace(/\D/g, '').slice(0, 2);
-      else if (key === 'ini') el('ini').value = val.replace(/[^\d-]/g, '').slice(0, 4);
       else if (key === 'leMax') el('leMax').value = val.replace(/\D/g, '').slice(0, 3);
       else if (key === 'aeMax') el('aeMax').value = val.replace(/\D/g, '').slice(0, 3);
     });

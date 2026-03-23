@@ -21,7 +21,6 @@
     "CH": 10,
     "FF": 11,
     "GE": 13,
-    "KO": 14,
     "KK": 12
   },
   "kampf": {
@@ -29,8 +28,7 @@
     "pa": 10,
     "wk": "Schwerter 8",
     "rs": 4,
-    "bewegung": 2,
-    "ini": 0
+    "bewegung": 2
   },
   "energien": {
     "leAktuell": 60,
@@ -41,8 +39,8 @@
     "auMax": 41
   },
   "talente": [
-    { "name": "Athletik", "probe": "GE/KO/KK", "wert": 4 },
-    { "name": "Schwimmen", "probe": "GE/KO/KK", "wert": 3 },
+    { "name": "Athletik", "probe": "GE/IN/KK", "wert": 4 },
+    { "name": "Schwimmen", "probe": "GE/IN/KK", "wert": 3 },
     { "name": "Menschenkenntnis", "probe": "KL/IN/CH", "wert": 2 }
   ],
   "inventar": [

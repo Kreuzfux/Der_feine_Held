@@ -93,10 +93,6 @@
               <input type="text" id="stand" name="stand" maxlength="120" />
             </div>
             <div class="field-group">
-              <label for="sp">Steigerungspunkte (SP)</label>
-              <input type="number" id="sp" name="sp" min="0" max="9999" step="1" />
-            </div>
-            <div class="field-group">
               <label for="groesse">Größe (cm)</label>
               <input type="number" id="groesse" name="groesse" min="0" max="400" step="1" />
             </div>
@@ -124,7 +120,7 @@
           <h2 class="panel-title sheet-title">Eigenschaften</h2>
           <p class="hint">Werte typisch 1–25 (Menschen oft 8–14). Abgeleitete Werte werden automatisch berechnet.</p>
           <div class="attrs-grid" id="attrsContainer">
-            <!-- per JS: MU, KL, IN, CH, FF, GE, KO, KK -->
+            <!-- per JS: MU, KL, IN, CH, FF, GE, KK -->
           </div>
           <div id="validationEigenschaften" class="validation-msg" role="alert"></div>
         </section>
@@ -141,8 +137,6 @@
                 <dt>Fernkampf-Basis</dt><dd><span id="derivedFkBasis">–</span></dd>
                 <dt>Zaubern (Basis)</dt><dd><span id="derivedZfBasis">–</span></dd>
                 <dt>MR (Basis)</dt><dd><span id="derivedMr">–</span></dd>
-                <dt>Ausdauer max. (AU)</dt><dd><span id="derivedAuMax">–</span></dd>
-                <dt>LE (Vorschlag Mensch)</dt><dd><span id="derivedLeSuggestion">–</span></dd>
               </dl>
             </div>
             <div class="kampf-inputs">
@@ -167,10 +161,6 @@
                 <div class="field-group">
                   <label for="bewegung">BE (Belastung)</label>
                   <input type="number" id="bewegung" name="bewegung" min="0" max="20" step="1" />
-                </div>
-                <div class="field-group">
-                  <label for="ini">INI-Bonus</label>
-                  <input type="number" id="ini" name="ini" min="-99" max="99" step="1" />
                 </div>
               </div>
             </div>
