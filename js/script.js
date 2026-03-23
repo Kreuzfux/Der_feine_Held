@@ -6,7 +6,8 @@
 (function () {
   'use strict';
 
-  const SUPABASE_CFG_KEY = 'dsa4_supabase_cfg_v1';
+  const SUPABASE_URL = 'https://lruinpcervcagkmtvobh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_B3S1bS6EYgZIDjf6bRJCAA_YgN9QGXz';
 
   /** Eigenschaftskürzel DSA 4.0 */
   const ATTR_KEYS = ['MU', 'KL', 'IN', 'CH', 'FF', 'GE', 'KK'];
@@ -44,38 +45,8 @@
   const ocrModal = el('ocrModal');
   const ocrRawPreview = el('ocrRawPreview');
   const ocrMapBody = el('ocrMapBody');
-  const useSupabase = el('useSupabase');
-  const supabaseUrlInput = el('supabaseUrl');
-  const supabaseAnonKeyInput = el('supabaseAnonKey');
-
   /** Letzte OCR-Zeile für Modal */
   let lastOcrMappings = [];
-
-  function saveSupabaseConfig() {
-    try {
-      const cfg = {
-        enabled: !!useSupabase.checked,
-        url: (supabaseUrlInput.value || '').trim(),
-        key: (supabaseAnonKeyInput.value || '').trim(),
-      };
-      localStorage.setItem(SUPABASE_CFG_KEY, JSON.stringify(cfg));
-    } catch (e) {
-      console.warn('Supabase-Konfiguration konnte nicht gespeichert werden:', e);
-    }
-  }
-
-  function loadSupabaseConfig() {
-    try {
-      const raw = localStorage.getItem(SUPABASE_CFG_KEY);
-      if (!raw) return;
-      const cfg = JSON.parse(raw);
-      if (typeof cfg.enabled === 'boolean') useSupabase.checked = cfg.enabled;
-      if (typeof cfg.url === 'string') supabaseUrlInput.value = cfg.url;
-      if (typeof cfg.key === 'string') supabaseAnonKeyInput.value = cfg.key;
-    } catch (e) {
-      console.warn('Supabase-Konfiguration konnte nicht geladen werden:', e);
-    }
-  }
 
   /**
    * Leeres Helden-Objekt (strukturierte Datenhaltung).
@@ -803,11 +774,27 @@
   }
 
   function getSupabaseConfig() {
-    if (!useSupabase.checked) return null;
-    const url = (supabaseUrlInput.value || '').trim().replace(/\/$/, '');
-    const key = (supabaseAnonKeyInput.value || '').trim();
+    const url = (SUPABASE_URL || '').trim().replace(/\/$/, '');
+    const key = (SUPABASE_KEY || '').trim();
     if (!url || !key) return null;
     return { url, key };
+  }
+
+  /**
+   * Supabase akzeptiert apikey; Authorization mit Bearer ist nur für JWT-Keys sinnvoll.
+   * @param {string} key
+   * @param {boolean} withJson
+   * @returns {Record<string, string>}
+   */
+  function getSupabaseHeaders(key, withJson) {
+    const headers = {
+      apikey: key,
+    };
+    if (/^eyJ[A-Za-z0-9_-]+\./.test(key)) {
+      headers.Authorization = `Bearer ${key}`;
+    }
+    if (withJson) headers['Content-Type'] = 'application/json';
+    return headers;
   }
 
   async function saveCurrentHeroToSupabase() {
@@ -827,9 +814,7 @@
       const res = await fetch(`${cfg.url}/rest/v1/heroes?on_conflict=id`, {
         method: 'POST',
         headers: {
-          apikey: cfg.key,
-          Authorization: `Bearer ${cfg.key}`,
-          'Content-Type': 'application/json',
+          ...getSupabaseHeaders(cfg.key, true),
           Prefer: 'resolution=merge-duplicates,return=representation',
         },
         body: JSON.stringify(payload),
@@ -859,10 +844,7 @@
       const res = await fetch(
         `${cfg.url}/rest/v1/heroes?select=id,data,updated_at&order=updated_at.desc`,
         {
-          headers: {
-            apikey: cfg.key,
-            Authorization: `Bearer ${cfg.key}`,
-          },
+          headers: getSupabaseHeaders(cfg.key, false),
         }
       );
       if (!res.ok) throw new Error(await res.text());
@@ -1067,9 +1049,6 @@
 
     el('btnSaveOnline').addEventListener('click', () => saveCurrentHeroToSupabase());
     el('btnLoadOnline').addEventListener('click', () => loadHeroesFromSupabase());
-    useSupabase.addEventListener('change', saveSupabaseConfig);
-    supabaseUrlInput.addEventListener('change', saveSupabaseConfig);
-    supabaseAnonKeyInput.addEventListener('change', saveSupabaseConfig);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !ocrModal.hidden) closeOcrModal();
@@ -1078,7 +1057,6 @@
 
   function init() {
     buildAttrInputs();
-    loadSupabaseConfig();
     characters = [createEmptyHero()];
     currentId = characters[0].id;
     wireEvents();
