@@ -6,6 +6,8 @@
 (function () {
   'use strict';
 
+  const SUPABASE_CFG_KEY = 'dsa4_supabase_cfg_v1';
+
   /** Eigenschaftskürzel DSA 4.0 */
   const ATTR_KEYS = ['MU', 'KL', 'IN', 'CH', 'FF', 'GE', 'KK'];
 
@@ -48,6 +50,32 @@
 
   /** Letzte OCR-Zeile für Modal */
   let lastOcrMappings = [];
+
+  function saveSupabaseConfig() {
+    try {
+      const cfg = {
+        enabled: !!useSupabase.checked,
+        url: (supabaseUrlInput.value || '').trim(),
+        key: (supabaseAnonKeyInput.value || '').trim(),
+      };
+      localStorage.setItem(SUPABASE_CFG_KEY, JSON.stringify(cfg));
+    } catch (e) {
+      console.warn('Supabase-Konfiguration konnte nicht gespeichert werden:', e);
+    }
+  }
+
+  function loadSupabaseConfig() {
+    try {
+      const raw = localStorage.getItem(SUPABASE_CFG_KEY);
+      if (!raw) return;
+      const cfg = JSON.parse(raw);
+      if (typeof cfg.enabled === 'boolean') useSupabase.checked = cfg.enabled;
+      if (typeof cfg.url === 'string') supabaseUrlInput.value = cfg.url;
+      if (typeof cfg.key === 'string') supabaseAnonKeyInput.value = cfg.key;
+    } catch (e) {
+      console.warn('Supabase-Konfiguration konnte nicht geladen werden:', e);
+    }
+  }
 
   /**
    * Leeres Helden-Objekt (strukturierte Datenhaltung).
@@ -810,10 +838,14 @@
       alert('Held online gespeichert.');
     } catch (e) {
       console.error(e);
-      alert(
-        'Online-Speichern fehlgeschlagen. Prüfe Supabase-Tabelle heroes (id text PK, data jsonb). Details: ' +
-        e.message
-      );
+      const msg = String(e?.message || e || 'Unbekannter Fehler');
+      if (/401|403|permission|jwt|apikey/i.test(msg)) {
+        alert('Online-Speichern fehlgeschlagen: Zugriff verweigert. Prüfe anon key und RLS-Policies.');
+      } else if (/relation .*heroes|does not exist/i.test(msg)) {
+        alert('Online-Speichern fehlgeschlagen: Tabelle public.heroes fehlt.');
+      } else {
+        alert('Online-Speichern fehlgeschlagen: ' + msg);
+      }
     }
   }
 
@@ -855,7 +887,14 @@
       alert(`${characters.length} Helden online geladen.`);
     } catch (e) {
       console.error(e);
-      alert('Online-Laden fehlgeschlagen: ' + e.message);
+      const msg = String(e?.message || e || 'Unbekannter Fehler');
+      if (/401|403|permission|jwt|apikey/i.test(msg)) {
+        alert('Online-Laden fehlgeschlagen: Zugriff verweigert. Prüfe anon key und RLS-Policies.');
+      } else if (/relation .*heroes|does not exist/i.test(msg)) {
+        alert('Online-Laden fehlgeschlagen: Tabelle public.heroes fehlt.');
+      } else {
+        alert('Online-Laden fehlgeschlagen: ' + msg);
+      }
     }
   }
 
@@ -1028,6 +1067,9 @@
 
     el('btnSaveOnline').addEventListener('click', () => saveCurrentHeroToSupabase());
     el('btnLoadOnline').addEventListener('click', () => loadHeroesFromSupabase());
+    useSupabase.addEventListener('change', saveSupabaseConfig);
+    supabaseUrlInput.addEventListener('change', saveSupabaseConfig);
+    supabaseAnonKeyInput.addEventListener('change', saveSupabaseConfig);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !ocrModal.hidden) closeOcrModal();
@@ -1036,6 +1078,7 @@
 
   function init() {
     buildAttrInputs();
+    loadSupabaseConfig();
     characters = [createEmptyHero()];
     currentId = characters[0].id;
     wireEvents();
