@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Der feine Held – DSA 4.0 Heldenbogen (Vanilla JS)
  * LocalStorage, JSON Import/Export, Tesseract-OCR, optionale Express-API
  */
@@ -8,6 +8,7 @@
 
   /** @const Schlüssel für LocalStorage */
   const STORAGE_KEY = 'dsa4_helden_v1';
+  const SUPABASE_SETTINGS_KEY = 'dsa4_supabase_settings_v1';
 
   /** Eigenschaftskürzel DSA 4.0 */
   const ATTR_KEYS = ['MU', 'KL', 'IN', 'CH', 'FF', 'GE', 'KK'];
@@ -47,6 +48,9 @@
   const ocrMapBody = el('ocrMapBody');
   const useBackendApi = el('useBackendApi');
   const apiBaseUrl = el('apiBaseUrl');
+  const useSupabase = el('useSupabase');
+  const supabaseUrlInput = el('supabaseUrl');
+  const supabaseAnonKeyInput = el('supabaseAnonKey');
 
   /** Letzte OCR-Zeile für Modal */
   let lastOcrMappings = [];
@@ -187,6 +191,32 @@
     } catch (e) {
       console.error('Speichern fehlgeschlagen:', e);
       alert('Speichern im Browser fehlgeschlagen (Speicher voll?).');
+    }
+  }
+
+  function saveSupabaseSettings() {
+    try {
+      const settings = {
+        enabled: !!useSupabase?.checked,
+        url: (supabaseUrlInput?.value || '').trim(),
+        key: (supabaseAnonKeyInput?.value || '').trim(),
+      };
+      localStorage.setItem(SUPABASE_SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('Supabase-Einstellungen konnten nicht gespeichert werden:', e);
+    }
+  }
+
+  function loadSupabaseSettings() {
+    try {
+      const raw = localStorage.getItem(SUPABASE_SETTINGS_KEY);
+      if (!raw) return;
+      const cfg = JSON.parse(raw);
+      if (useSupabase) useSupabase.checked = !!cfg.enabled;
+      if (supabaseUrlInput && typeof cfg.url === 'string') supabaseUrlInput.value = cfg.url;
+      if (supabaseAnonKeyInput && typeof cfg.key === 'string') supabaseAnonKeyInput.value = cfg.key;
+    } catch (e) {
+      console.warn('Supabase-Einstellungen konnten nicht geladen werden:', e);
     }
   }
 
@@ -853,6 +883,92 @@
     }
   }
 
+  function getSupabaseConfig() {
+    if (!useSupabase.checked) return null;
+    const url = (supabaseUrlInput.value || '').trim().replace(/\/$/, '');
+    const key = (supabaseAnonKeyInput.value || '').trim();
+    if (!url || !key) return null;
+    return { url, key };
+  }
+
+  async function saveCurrentHeroToSupabase() {
+    const cfg = getSupabaseConfig();
+    if (!cfg) {
+      alert('Bitte Supabase aktivieren und URL + anon key eintragen.');
+      return;
+    }
+    saveFormToCurrent();
+    const h = getCurrentHero();
+    const payload = [{
+      id: h.id,
+      data: h,
+      updated_at: new Date().toISOString(),
+    }];
+    try {
+      const res = await fetch(`${cfg.url}/rest/v1/heroes?on_conflict=id`, {
+        method: 'POST',
+        headers: {
+          apikey: cfg.key,
+          Authorization: `Bearer ${cfg.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      alert('Held online gespeichert.');
+    } catch (e) {
+      console.error(e);
+      alert(
+        'Online-Speichern fehlgeschlagen. Prüfe Supabase-Tabelle heroes (id text PK, data jsonb). Details: ' +
+        e.message
+      );
+    }
+  }
+
+  async function loadHeroesFromSupabase() {
+    const cfg = getSupabaseConfig();
+    if (!cfg) {
+      alert('Bitte Supabase aktivieren und URL + anon key eintragen.');
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${cfg.url}/rest/v1/heroes?select=id,data,updated_at&order=updated_at.desc`,
+        {
+          headers: {
+            apikey: cfg.key,
+            Authorization: `Bearer ${cfg.key}`,
+          },
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) {
+        alert('Keine Online-Helden gefunden.');
+        return;
+      }
+      const list = rows
+        .map((r) => normalizeHero(r.data))
+        .filter((h) => h && h.id);
+      if (!list.length) {
+        alert('Online-Daten enthalten keine gültigen Helden.');
+        return;
+      }
+      characters = list;
+      currentId = characters[0].id;
+      saveToStorage();
+      heroToForm(getCurrentHero());
+      renderCharacterList();
+      updateDerivedDisplay();
+      renderValidation();
+      alert(`${characters.length} Helden online geladen.`);
+    } catch (e) {
+      console.error(e);
+      alert('Online-Laden fehlgeschlagen: ' + e.message);
+    }
+  }
+
   // ——— Events ———
 
   function wireEvents() {
@@ -1061,9 +1177,14 @@
     el('ocrApplySelected').addEventListener('click', applyOcrSelections);
 
     el('btnSaveApi').addEventListener('click', () => saveViaApi());
+    el('btnSaveOnline').addEventListener('click', () => saveCurrentHeroToSupabase());
+    el('btnLoadOnline').addEventListener('click', () => loadHeroesFromSupabase());
     useBackendApi.addEventListener('change', () => {
       if (useBackendApi.checked) loadListFromApi();
     });
+    useSupabase.addEventListener('change', saveSupabaseSettings);
+    supabaseUrlInput.addEventListener('change', saveSupabaseSettings);
+    supabaseAnonKeyInput.addEventListener('change', saveSupabaseSettings);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !ocrModal.hidden) closeOcrModal();
@@ -1073,6 +1194,7 @@
   function init() {
     buildAttrInputs();
     loadFromStorage();
+    loadSupabaseSettings();
     wireEvents();
     heroToForm(getCurrentHero());
     renderCharacterList();

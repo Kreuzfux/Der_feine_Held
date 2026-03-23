@@ -29,6 +29,12 @@
         <span>Express-API nutzen</span>
       </label>
       <input type="url" id="apiBaseUrl" class="api-url" placeholder="http://localhost:3000" value="http://localhost:3000" title="Basis-URL des optionalen Backends" />
+      <label class="api-toggle">
+        <input type="checkbox" id="useSupabase" />
+        <span>Supabase Online-Speicher</span>
+      </label>
+      <input type="url" id="supabaseUrl" class="api-url" placeholder="https://xyzcompany.supabase.co" title="Supabase Projekt-URL" />
+      <input type="password" id="supabaseAnonKey" class="api-url" placeholder="Supabase anon key" title="Supabase anon/public key" />
     </div>
   </header>
 
@@ -259,6 +265,8 @@
             <input type="file" id="importJson" accept="application/json,.json" hidden />
           </label>
           <button type="button" id="btnSaveApi" class="btn btn-accent" title="Nur wenn Backend aktiv">Über API speichern</button>
+          <button type="button" id="btnSaveOnline" class="btn btn-accent" title="Nur wenn Supabase aktiv">Online speichern</button>
+          <button type="button" id="btnLoadOnline" class="btn btn-ghost" title="Nur wenn Supabase aktiv">Online laden</button>
         </section>
       </form>
     </main>

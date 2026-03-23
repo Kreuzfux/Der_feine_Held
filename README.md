@@ -1,4 +1,4 @@
-﻿# Der feine Held
+# Der feine Held
 
 Webbasiertes Tool zur digitalen Erfassung von Heldenbögen für **Das Schwarze Auge 4.0** (reines HTML/CSS/Vanilla-JavaScript). Es unterstützt **mehrere Charaktere**, **LocalStorage**, **JSON-Import/Export**, **Tesseract.js-OCR** für gescannte Bögen sowie optional einen kleinen **Node.js/Express**-Server für eine REST-API.
 
@@ -14,6 +14,7 @@ Webbasiertes Tool zur digitalen Erfassung von Heldenbögen für **Das Schwarze A
 - **Mehrere Helden**, Auswahl in der Seitenleiste, Duplizieren/Löschen
 - **Export/Import** einzelner Helden als JSON sowie **Bundle** (`dsa4_alle_helden.json` mit Feld `helden: [...]`)
 - **Optional**: Express-API (`GET/POST/DELETE /api/characters`) mit Datei-Backend
+- **Optional**: Supabase Online-Speicherung (REST über `heroes`-Tabelle)
 
 ## GitHub Pages (Frontend-only)
 
@@ -50,6 +51,45 @@ npm start
 - API: `http://localhost:3000`
 - Im Browser-Tool **„Express-API nutzen“** aktivieren und Basis-URL `http://localhost:3000` eintragen.
 - **Hinweis:** Eine **HTTPS**-GitHub-Page darf aus Sicherheitsgründen typischerweise **keine** Anfragen an `http://localhost` senden. Die API ist für **lokale Nutzung** oder ein eigenes HTTPS-Backend gedacht.
+
+## Online-Speicher mit Supabase (empfohlen)
+
+1. In Supabase ein Projekt anlegen.
+2. SQL im Supabase SQL-Editor ausführen:
+
+```sql
+create table if not exists public.heroes (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.heroes enable row level security;
+
+create policy "anon can read heroes"
+on public.heroes for select
+to anon
+using (true);
+
+create policy "anon can write heroes"
+on public.heroes for insert
+to anon
+with check (true);
+
+create policy "anon can update heroes"
+on public.heroes for update
+to anon
+using (true)
+with check (true);
+```
+
+3. In der App oben:
+   - **Supabase Online-Speicher** aktivieren
+   - **Supabase URL** eintragen (`https://...supabase.co`)
+   - **anon key** eintragen
+4. Mit **Online speichern** den aktiven Helden hochladen, mit **Online laden** alle Online-Helden lokal übernehmen.
+
+Hinweis: Für produktive Nutzung solltest du Auth/Rollen härter absichern; die obigen Policies sind bewusst einfach für den schnellen Start.
 
 ## Beispiel-Held
 
