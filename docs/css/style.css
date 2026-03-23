@@ -362,6 +362,17 @@ textarea:focus {
   color: var(--ink-muted);
 }
 
+/* Kampf-Grid: gleiche Label-Höhe für saubere Ausrichtung (z. B. BE-Feld) */
+.kampf-inputs .grid-3 {
+  align-items: end;
+}
+
+.kampf-inputs .field-group label {
+  min-height: 2.2em;
+  display: flex;
+  align-items: flex-end;
+}
+
 .derived-list {
   margin: 0;
   display: grid;

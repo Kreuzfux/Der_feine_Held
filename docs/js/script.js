@@ -217,7 +217,6 @@
       atBasis: teile5(mu, inn, ge),
       paBasis: teile5(inn, ge, kk),
       fkBasis: teile5(inn, ff, kk),
-      zfBasis: teile5(mu, inn, ch),
       mrBasis: teile5(mu, kl, ch),
       leMensch: null,
     };
@@ -271,7 +270,6 @@
     set('derivedAtBasis', d.atBasis);
     set('derivedPaBasis', d.paBasis);
     set('derivedFkBasis', d.fkBasis);
-    set('derivedZfBasis', d.zfBasis);
     set('derivedMr', d.mrBasis);
   }
 
