@@ -1,14 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Digitaler Heldenbogen fÃ¼r Das Schwarze Auge 4.0 â€“ Erfassung, OCR und lokale Speicherung" />
-  <title>Der feine Held â€“ DSA 4.0 Heldenbogen</title>
+  <meta name="description" content="Digitaler Heldenbogen für Das Schwarze Auge 4.0 – Erfassung, OCR und lokale Speicherung" />
+  <title>Der feine Held – DSA 4.0 Heldenbogen</title>
   <link rel="stylesheet" href="css/style.css" />
-  <!-- Tesseract.js fÃ¼r OCR (CDN, funktioniert auf GitHub Pages) -->
+  <!-- Tesseract.js für OCR (CDN, funktioniert auf GitHub Pages) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
-  <!-- PDF.js fÃ¼r PDF-Upload und Seitenrasterung -->
+  <!-- PDF.js für PDF-Upload und Seitenrasterung -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs" type="module"></script>
   <script src="js/script.js" defer></script>
 </head>
@@ -17,10 +17,10 @@
 
   <header class="app-header">
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true">âš”</span>
+      <span class="brand-mark" aria-hidden="true">⚔</span>
       <div>
         <h1>Der feine Held</h1>
-        <p class="tagline">DSA 4.0 â€“ digitaler Heldenbogen</p>
+        <p class="tagline">DSA 4.0 – digitaler Heldenbogen</p>
       </div>
     </div>
     <div class="header-actions">
@@ -42,7 +42,7 @@
       <ul id="characterList" class="character-list"></ul>
       <div class="sidebar-foot">
         <button type="button" id="btnDuplicateHero" class="btn btn-ghost">Duplizieren</button>
-        <button type="button" id="btnDeleteHero" class="btn btn-danger">LÃ¶schen</button>
+        <button type="button" id="btnDeleteHero" class="btn btn-danger">Löschen</button>
       </div>
     </aside>
 
@@ -57,7 +57,7 @@
           </div>
           <div class="preview-wrap">
             <img id="uploadPreview" alt="Vorschau des hochgeladenen Bildes" hidden />
-            <span id="uploadPlaceholder" class="placeholder-text">Kein Bild gewÃ¤hlt</span>
+            <span id="uploadPlaceholder" class="placeholder-text">Kein Bild gewählt</span>
           </div>
           <div class="btn-row">
             <button type="button" id="btnRunOcr" class="btn btn-accent" disabled>OCR starten</button>
@@ -93,7 +93,7 @@
               <input type="text" id="stand" name="stand" maxlength="120" />
             </div>
             <div class="field-group">
-              <label for="groesse">GrÃ¶ÃŸe (cm)</label>
+              <label for="groesse">Größe (cm)</label>
               <input type="number" id="groesse" name="groesse" min="0" max="400" step="1" />
             </div>
             <div class="field-group">
@@ -118,7 +118,6 @@
         <!-- Eigenschaften -->
         <section class="panel sheet-block">
           <h2 class="panel-title sheet-title">Eigenschaften</h2>
-          <p class="hint">Werte typisch 1â€“25 (Menschen oft 8â€“14). Abgeleitete Werte werden automatisch berechnet.</p>
           <div class="attrs-grid" id="attrsContainer">
             <!-- per JS: MU, KL, IN, CH, FF, GE, KK -->
           </div>
@@ -130,12 +129,12 @@
           <h2 class="panel-title sheet-title">Abgeleitete Werte &amp; Kampf</h2>
           <div class="derived-grid">
             <div class="derived-card">
-              <h3>Berechnet (DSA 4.0 Ã¼blich)</h3>
+              <h3>Berechnet (DSA 4.0 üblich)</h3>
               <dl class="derived-list">
-                <dt>AT-Basis (Nahkampf)</dt><dd><span id="derivedAtBasis">â€“</span></dd>
-                <dt>PA-Basis</dt><dd><span id="derivedPaBasis">â€“</span></dd>
-                <dt>Fernkampf-Basis</dt><dd><span id="derivedFkBasis">â€“</span></dd>
-                <dt>MR (Basis)</dt><dd><span id="derivedMr">â€“</span></dd>
+                <dt>AT-Basis (Nahkampf)</dt><dd><span id="derivedAtBasis">–</span></dd>
+                <dt>PA-Basis</dt><dd><span id="derivedPaBasis">–</span></dd>
+                <dt>Fernkampf-Basis</dt><dd><span id="derivedFkBasis">–</span></dd>
+                <dt>MR (Basis)</dt><dd><span id="derivedMr">–</span></dd>
               </dl>
             </div>
             <div class="kampf-inputs">
@@ -154,7 +153,7 @@
                   <input type="text" id="wk" name="wk" maxlength="80" />
                 </div>
                 <div class="field-group">
-                  <label for="rs">RÃ¼stungsschutz (RS)</label>
+                  <label for="rs">Rüstungsschutz (RS)</label>
                   <input type="number" id="rs" name="rs" min="0" max="30" step="1" />
                 </div>
                 <div class="field-group">
@@ -203,7 +202,7 @@
         <section class="panel sheet-block">
           <div class="section-head">
             <h2 class="panel-title sheet-title">Talente &amp; Fertigkeiten</h2>
-            <button type="button" id="btnAddTalent" class="btn btn-ghost btn-sm">Zeile hinzufÃ¼gen</button>
+            <button type="button" id="btnAddTalent" class="btn btn-ghost btn-sm">Zeile hinzufügen</button>
           </div>
           <div class="table-wrap">
             <table class="data-table" id="talentsTable">
@@ -246,7 +245,7 @@
           <h2 class="panel-title sheet-title">Notizen</h2>
           <div class="field-group">
             <label for="notizen" class="visually-hidden">Notizen</label>
-            <textarea id="notizen" name="notizen" rows="5" maxlength="8000" placeholder="Abenteuer, Sonderregeln, Spielnotizen â€¦"></textarea>
+            <textarea id="notizen" name="notizen" rows="5" maxlength="8000" placeholder="Abenteuer, Sonderregeln, Spielnotizen …"></textarea>
           </div>
         </section>
 
@@ -259,7 +258,7 @@
             JSON importieren
             <input type="file" id="importJson" accept="application/json,.json" hidden />
           </label>
-          <button type="button" id="btnSaveApi" class="btn btn-accent" title="Nur wenn Backend aktiv">Ãœber API speichern</button>
+          <button type="button" id="btnSaveApi" class="btn btn-accent" title="Nur wenn Backend aktiv">Über API speichern</button>
         </section>
       </form>
     </main>
@@ -270,10 +269,10 @@
     <div class="modal-backdrop" data-close-modal></div>
     <div class="modal-card">
       <header class="modal-head">
-        <h2 id="ocrModalTitle">OCR â€“ erkannte Werte prÃ¼fen</h2>
-        <button type="button" class="modal-close" data-close-modal aria-label="SchlieÃŸen">Ã—</button>
+        <h2 id="ocrModalTitle">OCR – erkannte Werte prüfen</h2>
+        <button type="button" class="modal-close" data-close-modal aria-label="Schließen">×</button>
       </header>
-      <p class="modal-hint">Passe die Zuordnung an und wÃ¤hle, welche Felder Ã¼bernommen werden sollen.</p>
+      <p class="modal-hint">Passe die Zuordnung an und wähle, welche Felder übernommen werden sollen.</p>
       <div class="modal-body">
         <div id="ocrRawPreview" class="ocr-raw" aria-label="Rohtext"></div>
         <table class="data-table ocr-map-table">
@@ -281,22 +280,23 @@
             <tr>
               <th>Feld</th>
               <th>Erkannt</th>
-              <th>Ãœbernehmen</th>
+              <th>Übernehmen</th>
             </tr>
           </thead>
           <tbody id="ocrMapBody"></tbody>
         </table>
       </div>
       <footer class="modal-foot">
-        <button type="button" id="ocrApplySelected" class="btn btn-primary">AusgewÃ¤hlte Ã¼bernehmen</button>
+        <button type="button" id="ocrApplySelected" class="btn btn-primary">Ausgewählte übernehmen</button>
         <button type="button" class="btn btn-ghost" data-close-modal>Abbrechen</button>
       </footer>
     </div>
   </div>
 
   <footer class="app-footer">
-    <p>Kein offizielles DSA-Produkt. Regelhinweise nach gÃ¤ngiger DSA-4.0-Praxis; Hausregeln mÃ¶glich.</p>
+    <p>Kein offizielles DSA-Produkt. Regelhinweise nach gängiger DSA-4.0-Praxis; Hausregeln möglich.</p>
   </footer>
 </body>
 </html>
+
 

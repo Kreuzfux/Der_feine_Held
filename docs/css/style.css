@@ -1,6 +1,6 @@
 ﻿/**
- * Der feine Held â€“ Styles im Stil eines klassischen DSA-Heldenbogens
- * Responsive, hoher Kontrast, Pergament-/DruckÃ¤sthetik
+ * Der feine Held – Styles im Stil eines klassischen DSA-Heldenbogens
+ * Responsive, hoher Kontrast, Pergament-/Druckästhetik
  */
 
 :root {
@@ -221,7 +221,7 @@ body {
   padding: 1rem 1.25rem 2rem;
 }
 
-/* Panels (Bogen-KÃ¤sten) */
+/* Panels (Bogen-Kästen) */
 .panel {
   background: var(--paper);
   border: 2px solid var(--border);
@@ -362,7 +362,7 @@ textarea:focus {
   color: var(--ink-muted);
 }
 
-/* Kampf-Grid: gleiche Label-HÃ¶he fÃ¼r saubere Ausrichtung (z. B. BE-Feld) */
+/* Kampf-Grid: gleiche Label-Höhe für saubere Ausrichtung (z. B. BE-Feld) */
 .kampf-inputs .grid-3 {
   align-items: end;
 }
@@ -716,4 +716,5 @@ textarea:focus {
   white-space: nowrap;
   border: 0;
 }
+
 

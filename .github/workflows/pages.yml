@@ -1,6 +1,6 @@
 ﻿# Statische Site (index.html im Root) nach GitHub Pages deployen.
-# In den Repo-Einstellungen: Settings â†’ Pages â†’ Source: GitHub Actions.
-# Dieser Workflow ersetzt fehleranfÃ¤llige Mehr-Job-Defaults fÃ¼r reines HTML.
+# In den Repo-Einstellungen: Settings → Pages → Source: GitHub Actions.
+# Dieser Workflow ersetzt fehleranfällige Mehr-Job-Defaults für reines HTML.
 
 name: Deploy static content to Pages
 
@@ -40,4 +40,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
 
