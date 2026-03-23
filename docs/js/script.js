@@ -1,14 +1,10 @@
 /**
  * Der feine Held – DSA 4.0 Heldenbogen (Vanilla JS)
- * LocalStorage, JSON Import/Export, Tesseract-OCR, optionale Express-API
+ * Supabase-Online-Speicher, JSON Import/Export, Tesseract-OCR
  */
 
 (function () {
   'use strict';
-
-  /** @const Schlüssel für LocalStorage */
-  const STORAGE_KEY = 'dsa4_helden_v1';
-  const SUPABASE_SETTINGS_KEY = 'dsa4_supabase_settings_v1';
 
   /** Eigenschaftskürzel DSA 4.0 */
   const ATTR_KEYS = ['MU', 'KL', 'IN', 'CH', 'FF', 'GE', 'KK'];
@@ -46,8 +42,6 @@
   const ocrModal = el('ocrModal');
   const ocrRawPreview = el('ocrRawPreview');
   const ocrMapBody = el('ocrMapBody');
-  const useBackendApi = el('useBackendApi');
-  const apiBaseUrl = el('apiBaseUrl');
   const useSupabase = el('useSupabase');
   const supabaseUrlInput = el('supabaseUrl');
   const supabaseAnonKeyInput = el('supabaseAnonKey');
@@ -161,63 +155,6 @@
     if (v === '' || v === null || v === undefined) return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
-  }
-
-  function loadFromStorage() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        characters = [createEmptyHero()];
-        currentId = characters[0].id;
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) throw new Error('Ungültiges Format');
-      characters = parsed.map(normalizeHero);
-      if (characters.length === 0) {
-        characters = [createEmptyHero()];
-      }
-      currentId = characters[0].id;
-    } catch (e) {
-      console.warn('LocalStorage konnte nicht gelesen werden:', e);
-      characters = [createEmptyHero()];
-      currentId = characters[0].id;
-    }
-  }
-
-  function saveToStorage() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(characters));
-    } catch (e) {
-      console.error('Speichern fehlgeschlagen:', e);
-      alert('Speichern im Browser fehlgeschlagen (Speicher voll?).');
-    }
-  }
-
-  function saveSupabaseSettings() {
-    try {
-      const settings = {
-        enabled: !!useSupabase?.checked,
-        url: (supabaseUrlInput?.value || '').trim(),
-        key: (supabaseAnonKeyInput?.value || '').trim(),
-      };
-      localStorage.setItem(SUPABASE_SETTINGS_KEY, JSON.stringify(settings));
-    } catch (e) {
-      console.warn('Supabase-Einstellungen konnten nicht gespeichert werden:', e);
-    }
-  }
-
-  function loadSupabaseSettings() {
-    try {
-      const raw = localStorage.getItem(SUPABASE_SETTINGS_KEY);
-      if (!raw) return;
-      const cfg = JSON.parse(raw);
-      if (useSupabase) useSupabase.checked = !!cfg.enabled;
-      if (supabaseUrlInput && typeof cfg.url === 'string') supabaseUrlInput.value = cfg.url;
-      if (supabaseAnonKeyInput && typeof cfg.key === 'string') supabaseAnonKeyInput.value = cfg.key;
-    } catch (e) {
-      console.warn('Supabase-Einstellungen konnten nicht geladen werden:', e);
-    }
   }
 
   function getCurrentHero() {
@@ -837,52 +774,6 @@
     return out;
   }
 
-  // ——— API (optional) ———
-
-  function apiUrl(path) {
-    const base = (apiBaseUrl.value || '').replace(/\/$/, '');
-    return base + path;
-  }
-
-  async function saveViaApi() {
-    if (!useBackendApi.checked) {
-      alert('Bitte „Express-API nutzen“ aktivieren.');
-      return;
-    }
-    saveFormToCurrent();
-    const h = getCurrentHero();
-    try {
-      const res = await fetch(apiUrl('/api/characters'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(h),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      alert('Auf dem Server gespeichert.');
-    } catch (e) {
-      console.error(e);
-      alert('API-Speichern fehlgeschlagen: ' + e.message);
-    }
-  }
-
-  async function loadListFromApi() {
-    if (!useBackendApi.checked) return;
-    try {
-      const res = await fetch(apiUrl('/api/characters'));
-      if (!res.ok) throw new Error(await res.text());
-      const list = await res.json();
-      if (Array.isArray(list) && list.length) {
-        characters = list.map(normalizeHero);
-        currentId = characters[0].id;
-        heroToForm(getCurrentHero());
-        renderCharacterList();
-        saveToStorage();
-      }
-    } catch (e) {
-      console.warn('API-Liste nicht geladen:', e);
-    }
-  }
-
   function getSupabaseConfig() {
     if (!useSupabase.checked) return null;
     const url = (supabaseUrlInput.value || '').trim().replace(/\/$/, '');
@@ -957,7 +848,6 @@
       }
       characters = list;
       currentId = characters[0].id;
-      saveToStorage();
       heroToForm(getCurrentHero());
       renderCharacterList();
       updateDerivedDisplay();
@@ -972,15 +862,6 @@
   // ——— Events ———
 
   function wireEvents() {
-    heroForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      saveFormToCurrent();
-      saveToStorage();
-      renderCharacterList();
-      renderValidation();
-      setOcrStatus('Im Browser gespeichert.', 'ok');
-    });
-
     heroForm.addEventListener('input', () => {
       updateDerivedDisplay();
       renderValidation();
@@ -991,7 +872,6 @@
       const n = createEmptyHero();
       characters.push(n);
       currentId = n.id;
-      saveToStorage();
       heroToForm(n);
       renderCharacterList();
       updateDerivedDisplay();
@@ -1006,7 +886,6 @@
       if (copy.stammdaten) copy.stammdaten.name = (copy.stammdaten.name || '') + ' (Kopie)';
       characters.push(normalizeHero(copy));
       currentId = characters[characters.length - 1].id;
-      saveToStorage();
       heroToForm(getCurrentHero());
       renderCharacterList();
     });
@@ -1019,37 +898,10 @@
       if (!confirm('Diesen Helden wirklich löschen?')) return;
       characters = characters.filter((c) => c.id !== currentId);
       currentId = characters[0].id;
-      saveToStorage();
       heroToForm(getCurrentHero());
       renderCharacterList();
       updateDerivedDisplay();
       renderValidation();
-    });
-
-    el('btnExportJson').addEventListener('click', () => {
-      saveFormToCurrent();
-      const h = getCurrentHero();
-      const blob = new Blob([JSON.stringify(h, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = (h.stammdaten.name || 'held').replace(/[^\wäöüÄÖÜß-]+/g, '_') + '.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
-    });
-
-    el('btnExportAllJson').addEventListener('click', () => {
-      saveFormToCurrent();
-      const bundle = {
-        version: 1,
-        exportiertAm: new Date().toISOString(),
-        helden: characters.map((c) => JSON.parse(JSON.stringify(c))),
-      };
-      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'dsa4_alle_helden.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
     });
 
     el('importJson').addEventListener('change', (ev) => {
@@ -1076,7 +928,6 @@
             }
             characters = list.map(normalizeHero);
             currentId = characters[0].id;
-            saveToStorage();
             heroToForm(getCurrentHero());
             renderCharacterList();
             updateDerivedDisplay();
@@ -1094,7 +945,6 @@
             characters.push(h);
           }
           currentId = h.id;
-          saveToStorage();
           heroToForm(getCurrentHero());
           renderCharacterList();
           updateDerivedDisplay();
@@ -1176,15 +1026,8 @@
     });
     el('ocrApplySelected').addEventListener('click', applyOcrSelections);
 
-    el('btnSaveApi').addEventListener('click', () => saveViaApi());
     el('btnSaveOnline').addEventListener('click', () => saveCurrentHeroToSupabase());
     el('btnLoadOnline').addEventListener('click', () => loadHeroesFromSupabase());
-    useBackendApi.addEventListener('change', () => {
-      if (useBackendApi.checked) loadListFromApi();
-    });
-    useSupabase.addEventListener('change', saveSupabaseSettings);
-    supabaseUrlInput.addEventListener('change', saveSupabaseSettings);
-    supabaseAnonKeyInput.addEventListener('change', saveSupabaseSettings);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !ocrModal.hidden) closeOcrModal();
@@ -1193,8 +1036,8 @@
 
   function init() {
     buildAttrInputs();
-    loadFromStorage();
-    loadSupabaseSettings();
+    characters = [createEmptyHero()];
+    currentId = characters[0].id;
     wireEvents();
     heroToForm(getCurrentHero());
     renderCharacterList();
