@@ -66,6 +66,19 @@ Danach funktionieren die Buttons **Online speichern** und **Online laden**.
 
 Die Supabase-URL und der publishable Key sind aktuell **fest im Frontend-Code** hinterlegt (`js/script.js`). Das ist für einen Prototyp okay, aber nicht für sensible Produktionsdaten. Für härtere Sicherheit sollte Auth/RLS nutzerbezogen erweitert werden.
 
+## Admin-Zugang
+
+Ein einfacher Admin-Zugang ist implementiert:
+
+- In `js/script.js` die Liste `ADMIN_EMAILS` pflegen.
+- Nach Login mit einer gelisteten E-Mail wird in der UI **Admin: alle Helden laden** eingeblendet.
+- Diese Funktion lädt alle Datensätze aus `public.heroes` (nur für Admin-Accounts vorgesehen).
+
+## Sichtbarkeit der Helden
+
+- **Normale eingeloggte Nutzer:** sehen und laden nur ihre eigenen Helden (`user_id = aktueller Benutzer`).
+- **Admin-Nutzer (Whitelist):** erhalten zusätzlich den Button **Admin: alle Helden laden** und können damit alle Helden laden.
+
 ## Projektstruktur
 
 ```txt

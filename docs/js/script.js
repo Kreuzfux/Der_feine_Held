@@ -8,6 +8,10 @@
 
   const SUPABASE_URL = 'https://lruinpcervcagkmtvobh.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_B3S1bS6EYgZIDjf6bRJCAA_YgN9QGXz';
+  // Admin-Zugriff über E-Mail-Whitelist (nach Bedarf erweitern).
+  const ADMIN_EMAILS = [
+    // 'admin@example.com',
+  ];
   const AUTH_SESSION_KEY = 'dsa4_supabase_auth_session_v1';
 
   /** Eigenschaftskürzel DSA 4.0 */
@@ -52,6 +56,7 @@
   const btnSignIn = el('btnSignIn');
   const btnSignOut = el('btnSignOut');
   const authStatus = el('authStatus');
+  const btnLoadAllOnline = el('btnLoadAllOnline');
   /** Letzte OCR-Zeile für Modal */
   let lastOcrMappings = [];
   /** @type {{ access_token?: string, refresh_token?: string, user?: { id?: string, email?: string } } | null} */
@@ -99,10 +104,20 @@
   function updateAuthUi() {
     const email = authSession?.user?.email || null;
     const loggedIn = !!authSession?.access_token && !!getCurrentUserId();
-    authStatus.textContent = loggedIn ? `Angemeldet: ${email || 'Benutzer'}` : 'Nicht angemeldet';
+    const admin = isAdmin();
+    authStatus.textContent = loggedIn
+      ? `Angemeldet: ${email || 'Benutzer'}${admin ? ' (Admin)' : ''}`
+      : 'Nicht angemeldet';
     btnSignOut.disabled = !loggedIn;
     btnSignIn.disabled = loggedIn;
     btnSignUp.disabled = loggedIn;
+    btnLoadAllOnline.hidden = !admin;
+  }
+
+  function isAdmin() {
+    const email = (authSession?.user?.email || '').toLowerCase();
+    if (!email) return false;
+    return ADMIN_EMAILS.map((x) => x.toLowerCase()).includes(email);
   }
 
   /**
@@ -1024,6 +1039,47 @@
     }
   }
 
+  async function loadAllHeroesFromSupabase() {
+    const cfg = getSupabaseConfig();
+    if (!cfg) {
+      alert('Supabase-Konfiguration fehlt.');
+      return;
+    }
+    if (!isAdmin() || !authSession?.access_token) {
+      alert('Admin-Zugriff erforderlich.');
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${cfg.url}/rest/v1/heroes?select=id,data,updated_at,user_id&order=updated_at.desc`,
+        {
+          headers: getSupabaseHeaders(cfg.key, false, authSession.access_token),
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) {
+        alert('Keine Online-Helden gefunden.');
+        return;
+      }
+      const list = rows.map((r) => normalizeHero(r.data)).filter((h) => h && h.id);
+      if (!list.length) {
+        alert('Online-Daten enthalten keine gültigen Helden.');
+        return;
+      }
+      characters = list;
+      currentId = characters[0].id;
+      heroToForm(getCurrentHero());
+      renderCharacterList();
+      updateDerivedDisplay();
+      renderValidation();
+      alert(`${characters.length} Helden (alle Nutzer) geladen.`);
+    } catch (e) {
+      console.error(e);
+      alert('Admin-Laden fehlgeschlagen: ' + (e.message || e));
+    }
+  }
+
   // ——— Events ———
 
   function wireEvents() {
@@ -1193,6 +1249,7 @@
 
     el('btnSaveOnline').addEventListener('click', () => saveCurrentHeroToSupabase());
     el('btnLoadOnline').addEventListener('click', () => loadHeroesFromSupabase());
+    btnLoadAllOnline.addEventListener('click', () => loadAllHeroesFromSupabase());
     btnSignUp.addEventListener('click', () => signUp());
     btnSignIn.addEventListener('click', () => signIn());
     btnSignOut.addEventListener('click', () => signOut());
