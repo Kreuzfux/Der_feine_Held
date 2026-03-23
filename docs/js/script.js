@@ -26,8 +26,8 @@
 
   let characters = [];
   let currentId = null;
-  /** @type {string|null} Data-URL des aktuellen Uploads (nur Sitzung) */
-  let currentImageDataUrl = null;
+  /** @type {string[]} Data-URLs für OCR (Bild oder gerenderte PDF-Seiten) */
+  let currentOcrImageDataUrls = [];
 
   // ——— DOM ———
   const el = (id) => document.getElementById(id);
@@ -498,6 +498,73 @@
       .replace(/</g, '&lt;');
   }
 
+  /**
+   * Liefert OCR-freundliche Textvarianten und normalisiert häufige OCR-Fehler.
+   * @param {string} text
+   * @returns {{ raw: string, normalized: string, collapsed: string }}
+   */
+  function buildOcrTextVariants(text) {
+    const raw = String(text || '').replace(/\r/g, '\n');
+    const normalized = raw
+      // Häufige OCR-Verwechslungen in Beschriftungen
+      .replace(/\bK1\b/g, 'KL')
+      .replace(/\b1N\b/g, 'IN')
+      .replace(/\bI N\b/g, 'IN')
+      .replace(/\bP A\b/g, 'PA')
+      .replace(/\bA T\b/g, 'AT')
+      .replace(/\bR S\b/g, 'RS')
+      .replace(/\bB E\b/g, 'BE')
+      .replace(/\bL E\b/g, 'LE')
+      .replace(/\bA E\b/g, 'AE')
+      .replace(/\bK O\b/g, 'KO')
+      .replace(/\bK K\b/g, 'KK')
+      .replace(/\bG E\b/g, 'GE')
+      .replace(/\bF F\b/g, 'FF');
+    const collapsed = normalized.replace(/[ \t]+/g, ' ').replace(/\n+/g, '\n');
+    return { raw, normalized, collapsed };
+  }
+
+  /**
+   * Erzeugt ein kontrastverstärktes Graustufenbild für OCR.
+   * @param {string} dataUrl
+   * @returns {Promise<string>}
+   */
+  async function preprocessImageForOcr(dataUrl) {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = dataUrl;
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+
+    const scale = Math.min(2.2, Math.max(1.4, 1800 / Math.max(img.width, img.height)));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return dataUrl;
+
+    ctx.drawImage(img, 0, 0, w, h);
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const p = imageData.data;
+
+    // Graustufen + leichter Kontrast-Boost + sanftes Thresholding
+    for (let i = 0; i < p.length; i += 4) {
+      const gray = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+      const contrast = Math.max(0, Math.min(255, (gray - 128) * 1.35 + 128));
+      const bin = contrast > 156 ? 255 : contrast < 92 ? 0 : contrast;
+      p[i] = bin;
+      p[i + 1] = bin;
+      p[i + 2] = bin;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+
   // ——— OCR: Regex-Muster für typische Bogen-Beschriftungen (DE) ———
 
   /**
@@ -505,7 +572,8 @@
    * @returns {Array<{ key: string, label: string, value: string }>}
    */
   function extractMappingsFromOcr(text) {
-    const t = text.replace(/\r/g, '\n');
+    const variants = buildOcrTextVariants(text);
+    const t = variants.collapsed;
     const oneLine = t.replace(/\s+/g, ' ');
     const mappings = [];
     const seen = new Set();
@@ -525,26 +593,64 @@
       }
     }
 
+    /**
+     * Findet "Label ... Zahl" auch über mehrere Zeilen.
+     * @param {string} key
+     * @param {string} label
+     * @param {RegExp} labelRe
+     * @param {number} digits
+     */
+    function tryNearbyNumber(key, label, labelRe, digits) {
+      if (seen.has(key)) return;
+      const lines = t.split('\n');
+      for (let i = 0; i < lines.length; i += 1) {
+        if (!labelRe.test(lines[i])) continue;
+        const region = [lines[i], lines[i + 1] || '', lines[i + 2] || ''].join(' ');
+        const m = region.match(new RegExp(`(-?\\d{1,${digits}})`));
+        if (m && m[1] != null) {
+          seen.add(key);
+          mappings.push({ key, label, value: String(m[1]).trim() });
+          return;
+        }
+      }
+    }
+
     // Eigenschaften: Kürzel oder ausgeschrieben
     const attrRes = [
-      ['MU', 'Mut', /(?:^|[^A-ZÄÖÜ])(?:Mut|MU)\b\s*[.:]?\s*(\d{1,2})\b/i],
-      ['KL', 'Klugheit', /(?:Klugheit|KL)\b\s*[.:]?\s*(\d{1,2})\b/i],
-      ['IN', 'Intuition', /(?:Intuition|IN)\b\s*[.:]?\s*(\d{1,2})\b/i],
-      ['CH', 'Charisma', /(?:Charisma|CH)\b\s*[.:]?\s*(\d{1,2})\b/i],
-      ['FF', 'Fingerfertigkeit', /(?:Fingerfertigkeit|FF)\b\s*[.:]?\s*(\d{1,2})\b/i],
-      ['GE', 'Gewandtheit', /(?:Gewandtheit|GE)\b\s*[.:]?\s*(\d{1,2})\b/i],
-      ['KO', 'Konstitution', /(?:Konstitution|KO)\b\s*[.:]?\s*(\d{1,2})\b/i],
-      ['KK', 'Körperkraft', /(?:Körperkraft|K[oö]rperkraft|KK)\b\s*[.:]?\s*(\d{1,2})\b/i],
+      ['MU', 'Mut', /(?:^|[^A-ZÄÖÜ])(?:Mut|MU)\b\s*[:.=]?\s*(\d{1,2})\b/i],
+      ['KL', 'Klugheit', /(?:Klugheit|KL)\b\s*[:.=]?\s*(\d{1,2})\b/i],
+      ['IN', 'Intuition', /(?:Intuition|IN)\b\s*[:.=]?\s*(\d{1,2})\b/i],
+      ['CH', 'Charisma', /(?:Charisma|CH)\b\s*[:.=]?\s*(\d{1,2})\b/i],
+      ['FF', 'Fingerfertigkeit', /(?:Fingerfertigkeit|FF)\b\s*[:.=]?\s*(\d{1,2})\b/i],
+      ['GE', 'Gewandtheit', /(?:Gewandtheit|GE)\b\s*[:.=]?\s*(\d{1,2})\b/i],
+      ['KO', 'Konstitution', /(?:Konstitution|KO)\b\s*[:.=]?\s*(\d{1,2})\b/i],
+      ['KK', 'Körperkraft', /(?:Körperkraft|K[oö]rperkraft|KK)\b\s*[:.=]?\s*(\d{1,2})\b/i],
     ];
     attrRes.forEach(([key, label, re]) => tryMatch(key, label, re, oneLine));
+    // Fallback: Label und Zahl stehen ggf. in benachbarten Zeilen
+    tryNearbyNumber('MU', 'Mut', /\b(?:Mut|MU)\b/i, 2);
+    tryNearbyNumber('KL', 'Klugheit', /\b(?:Klugheit|KL)\b/i, 2);
+    tryNearbyNumber('IN', 'Intuition', /\b(?:Intuition|IN)\b/i, 2);
+    tryNearbyNumber('CH', 'Charisma', /\b(?:Charisma|CH)\b/i, 2);
+    tryNearbyNumber('FF', 'Fingerfertigkeit', /\b(?:Fingerfertigkeit|FF)\b/i, 2);
+    tryNearbyNumber('GE', 'Gewandtheit', /\b(?:Gewandtheit|GE)\b/i, 2);
+    tryNearbyNumber('KO', 'Konstitution', /\b(?:Konstitution|KO)\b/i, 2);
+    tryNearbyNumber('KK', 'Körperkraft', /\b(?:K[oö]rperkraft|KK)\b/i, 2);
 
-    tryMatch('at', 'AT (Angriff)', /\bAT\b\s*[.:]?\s*(-?\d{1,2})\b/i, oneLine);
-    tryMatch('pa', 'PA (Parade)', /\bPA\b\s*[.:]?\s*(-?\d{1,2})\b/i, oneLine);
-    tryMatch('rs', 'Rüstungsschutz RS', /\bRS\b\s*[.:]?\s*(\d{1,2})\b/i, oneLine);
-    tryMatch('bewegung', 'BE (Belastung)', /\bBE\b\s*[.:]?\s*(\d{1,2})\b/i, oneLine);
-    tryMatch('ini', 'INI', /\bINI\b\s*[.:]?\s*(-?\d{1,2})\b/i, oneLine);
-    tryMatch('leMax', 'LE max.', /\bLE\b\s*[.:]?\s*(\d{1,3})\b/i, oneLine);
-    tryMatch('aeMax', 'AE max.', /\bAE\b\s*[.:]?\s*(\d{1,3})\b/i, oneLine);
+    tryMatch('at', 'AT (Angriff)', /\bAT\b\s*[:.=]?\s*(-?\d{1,2})\b/i, oneLine);
+    tryMatch('pa', 'PA (Parade)', /\bPA\b\s*[:.=]?\s*(-?\d{1,2})\b/i, oneLine);
+    tryMatch('rs', 'Rüstungsschutz RS', /\bRS\b\s*[:.=]?\s*(\d{1,2})\b/i, oneLine);
+    tryMatch('bewegung', 'BE (Belastung)', /\bBE\b\s*[:.=]?\s*(\d{1,2})\b/i, oneLine);
+    tryMatch('ini', 'INI', /\bINI\b\s*[:.=]?\s*(-?\d{1,2})\b/i, oneLine);
+    tryMatch('leMax', 'LE max.', /\b(?:LE|Lebensenergie)\b\s*[:.=]?\s*(\d{1,3})\b/i, oneLine);
+    tryMatch('aeMax', 'AE max.', /\b(?:AE|Astralenergie)\b\s*[:.=]?\s*(\d{1,3})\b/i, oneLine);
+    tryNearbyNumber('at', 'AT (Angriff)', /\bAT\b/i, 2);
+    tryNearbyNumber('pa', 'PA (Parade)', /\bPA\b/i, 2);
+    tryNearbyNumber('rs', 'Rüstungsschutz RS', /\bRS\b/i, 2);
+    tryNearbyNumber('bewegung', 'BE (Belastung)', /\bBE\b/i, 2);
+    tryNearbyNumber('ini', 'INI', /\bINI\b/i, 2);
+    tryNearbyNumber('leMax', 'LE max.', /\b(?:LE|Lebensenergie)\b/i, 3);
+    tryNearbyNumber('aeMax', 'AE max.', /\b(?:AE|Astralenergie)\b/i, 3);
 
     // Name: erste Zeile mit Buchstaben
     const firstLine = t.split('\n').map((l) => l.trim()).find((l) => /[A-Za-zÄÖÜäöü]{2,}/.test(l));
@@ -620,8 +726,8 @@
   }
 
   async function runOcr() {
-    if (!currentImageDataUrl) {
-      setOcrStatus('Bitte zuerst ein Bild wählen.', 'error');
+    if (!currentOcrImageDataUrls.length) {
+      setOcrStatus('Bitte zuerst ein Bild oder PDF wählen.', 'error');
       return;
     }
     if (typeof Tesseract === 'undefined') {
@@ -629,18 +735,50 @@
       return;
     }
     btnRunOcr.disabled = true;
-    setOcrStatus('OCR läuft … (kann einige Sekunden dauern)', '');
+    setOcrStatus('OCR läuft … Quelle wird vorbereitet.', '');
     try {
-      const result = await Tesseract.recognize(currentImageDataUrl, 'deu', {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            const p = m.progress != null ? Math.round(m.progress * 100) : '';
-            setOcrStatus(`OCR: Texterkennung … ${p}%`, '');
-          }
-        },
-      });
-      const text = result.data.text || '';
-      const mappings = extractMappingsFromOcr(text);
+      const mappingByKey = new Map();
+      const allTexts = [];
+      for (let pageIndex = 0; pageIndex < currentOcrImageDataUrls.length; pageIndex += 1) {
+        const source = currentOcrImageDataUrls[pageIndex];
+        setOcrStatus(
+          `OCR: Seite/Bild ${pageIndex + 1} von ${currentOcrImageDataUrls.length} wird vorbereitet …`,
+          ''
+        );
+        const processed = await preprocessImageForOcr(source);
+        const options = {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              const p = m.progress != null ? Math.round(m.progress * 100) : '';
+              setOcrStatus(
+                `OCR Seite/Bild ${pageIndex + 1}/${currentOcrImageDataUrls.length}: ${p}%`,
+                ''
+              );
+            }
+          },
+        };
+
+        const [resA, resB] = await Promise.all([
+          Tesseract.recognize(processed, 'deu', options),
+          // Zweiter Durchlauf hilft oft bei Mischtexten/Abkürzungen
+          Tesseract.recognize(processed, 'deu+eng', options),
+        ]);
+
+        const textA = resA.data.text || '';
+        const textB = resB.data.text || '';
+        const mapA = extractMappingsFromOcr(textA);
+        const mapB = extractMappingsFromOcr(textB);
+        const text = textA.length >= textB.length ? textA : textB;
+        allTexts.push(`=== Seite/Bild ${pageIndex + 1} ===\n${text}`);
+
+        mapA.forEach((m) => mappingByKey.set(m.key, m));
+        mapB.forEach((m) => {
+          if (!mappingByKey.has(m.key)) mappingByKey.set(m.key, m);
+        });
+      }
+
+      const mappings = Array.from(mappingByKey.values());
+      const text = allTexts.join('\n\n');
       if (mappings.length === 0) {
         setOcrStatus('Keine typischen Felder erkannt. Rohtext im Dialog prüfen.', 'error');
         openOcrModal(text, [{ key: '_hint', label: 'Hinweis', value: 'Manuell Werte aus dem Text oben ablesen.' }]);
@@ -654,6 +792,45 @@
     } finally {
       btnRunOcr.disabled = false;
     }
+  }
+
+  /**
+   * Rendert ein PDF in mehrere Canvas-Seiten und liefert Data-URLs für OCR.
+   * @param {ArrayBuffer} pdfBuffer
+   * @returns {Promise<string[]>}
+   */
+  async function renderPdfToImageDataUrls(pdfBuffer) {
+    const pdfjs = window.pdfjsLib;
+    if (!pdfjs) {
+      throw new Error('PDF.js nicht geladen. Bitte Seite neu laden.');
+    }
+    if (pdfjs.GlobalWorkerOptions) {
+      pdfjs.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs';
+    }
+    const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
+    const pdf = await loadingTask.promise;
+    const pageCount = pdf.numPages;
+    const maxPages = Math.min(pageCount, 6);
+    const out = [];
+
+    for (let i = 1; i <= maxPages; i += 1) {
+      setOcrStatus(`PDF wird vorbereitet: Seite ${i}/${maxPages} …`, '');
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) continue;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      out.push(canvas.toDataURL('image/png'));
+    }
+
+    if (pageCount > maxPages) {
+      setOcrStatus(`PDF hat ${pageCount} Seiten. Für OCR werden die ersten ${maxPages} verarbeitet.`, '');
+    }
+    return out;
   }
 
   // ——— API (optional) ———
@@ -847,26 +1024,55 @@
     imageUpload.addEventListener('change', () => {
       const file = imageUpload.files && imageUpload.files[0];
       if (!file) {
-        currentImageDataUrl = null;
+        currentOcrImageDataUrls = [];
         uploadPreview.hidden = true;
         uploadPlaceholder.hidden = false;
         btnRunOcr.disabled = true;
         return;
       }
+      const isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name);
+      if (isPdf) {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            setOcrStatus('PDF wird eingelesen …', '');
+            const dataUrls = await renderPdfToImageDataUrls(reader.result);
+            currentOcrImageDataUrls = dataUrls;
+            if (!dataUrls.length) throw new Error('Keine PDF-Seiten renderbar.');
+            uploadPreview.src = dataUrls[0];
+            uploadPreview.hidden = false;
+            uploadPlaceholder.hidden = true;
+            btnRunOcr.disabled = false;
+            setOcrStatus(`PDF geladen: ${dataUrls.length} Seite(n) für OCR bereit.`, 'ok');
+          } catch (e) {
+            console.error(e);
+            currentOcrImageDataUrls = [];
+            uploadPreview.hidden = true;
+            uploadPlaceholder.hidden = false;
+            btnRunOcr.disabled = true;
+            setOcrStatus('PDF konnte nicht verarbeitet werden: ' + (e.message || e), 'error');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
-        currentImageDataUrl = String(reader.result);
-        uploadPreview.src = currentImageDataUrl;
+        const dataUrl = String(reader.result);
+        currentOcrImageDataUrls = [dataUrl];
+        uploadPreview.src = dataUrl;
         uploadPreview.hidden = false;
         uploadPlaceholder.hidden = true;
         btnRunOcr.disabled = false;
+        setOcrStatus('Bild geladen. OCR bereit.', 'ok');
       };
       reader.readAsDataURL(file);
     });
 
     btnClearImage.addEventListener('click', () => {
       imageUpload.value = '';
-      currentImageDataUrl = null;
+      currentOcrImageDataUrls = [];
       uploadPreview.hidden = true;
       uploadPlaceholder.hidden = false;
       btnRunOcr.disabled = true;

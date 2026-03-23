@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="css/style.css" />
   <!-- Tesseract.js für OCR (CDN, funktioniert auf GitHub Pages) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
+  <!-- PDF.js für PDF-Upload und Seitenrasterung -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs" type="module"></script>
   <script src="js/script.js" defer></script>
 </head>
 <body>
@@ -50,8 +52,8 @@
         <h2 class="panel-title">Dateien &amp; OCR</h2>
         <div class="toolbar-grid">
           <div class="field-group">
-            <label for="imageUpload">Heldenbogen-Scan / Foto</label>
-            <input type="file" id="imageUpload" accept="image/*" />
+            <label for="imageUpload">Heldenbogen-Scan / Foto / PDF</label>
+            <input type="file" id="imageUpload" accept="image/*,.pdf,application/pdf" />
           </div>
           <div class="preview-wrap">
             <img id="uploadPreview" alt="Vorschau des hochgeladenen Bildes" hidden />
