@@ -24,7 +24,12 @@
       </div>
     </div>
     <div class="header-actions">
-      <span class="tagline">Supabase Online-Speicher aktiv</span>
+      <input type="email" id="authEmail" class="api-url" placeholder="E-Mail" autocomplete="email" />
+      <input type="password" id="authPassword" class="api-url" placeholder="Passwort" autocomplete="current-password" />
+      <button type="button" id="btnSignUp" class="btn btn-ghost btn-sm">Registrieren</button>
+      <button type="button" id="btnSignIn" class="btn btn-primary btn-sm">Login</button>
+      <button type="button" id="btnSignOut" class="btn btn-ghost btn-sm">Logout</button>
+      <span id="authStatus" class="tagline">Nicht angemeldet</span>
     </div>
   </header>
 

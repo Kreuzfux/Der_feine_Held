@@ -8,6 +8,7 @@
 
   const SUPABASE_URL = 'https://lruinpcervcagkmtvobh.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_B3S1bS6EYgZIDjf6bRJCAA_YgN9QGXz';
+  const AUTH_SESSION_KEY = 'dsa4_supabase_auth_session_v1';
 
   /** Eigenschaftskürzel DSA 4.0 */
   const ATTR_KEYS = ['MU', 'KL', 'IN', 'CH', 'FF', 'GE', 'KK'];
@@ -45,8 +46,64 @@
   const ocrModal = el('ocrModal');
   const ocrRawPreview = el('ocrRawPreview');
   const ocrMapBody = el('ocrMapBody');
+  const authEmail = el('authEmail');
+  const authPassword = el('authPassword');
+  const btnSignUp = el('btnSignUp');
+  const btnSignIn = el('btnSignIn');
+  const btnSignOut = el('btnSignOut');
+  const authStatus = el('authStatus');
   /** Letzte OCR-Zeile für Modal */
   let lastOcrMappings = [];
+  /** @type {{ access_token?: string, refresh_token?: string, user?: { id?: string, email?: string } } | null} */
+  let authSession = null;
+
+  function saveAuthSession() {
+    try {
+      if (authSession) localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(authSession));
+      else localStorage.removeItem(AUTH_SESSION_KEY);
+    } catch (e) {
+      console.warn('Auth-Session konnte nicht gespeichert werden:', e);
+    }
+  }
+
+  function loadAuthSession() {
+    try {
+      const raw = localStorage.getItem(AUTH_SESSION_KEY);
+      if (!raw) return;
+      authSession = JSON.parse(raw);
+    } catch (e) {
+      console.warn('Auth-Session konnte nicht geladen werden:', e);
+      authSession = null;
+    }
+  }
+
+  function parseJwtPayload(token) {
+    try {
+      const base64 = token.split('.')[1];
+      if (!base64) return null;
+      const json = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  function getCurrentUserId() {
+    if (authSession?.user?.id) return authSession.user.id;
+    const token = authSession?.access_token;
+    if (!token) return null;
+    const payload = parseJwtPayload(token);
+    return payload?.sub || payload?.user_id || null;
+  }
+
+  function updateAuthUi() {
+    const email = authSession?.user?.email || null;
+    const loggedIn = !!authSession?.access_token && !!getCurrentUserId();
+    authStatus.textContent = loggedIn ? `Angemeldet: ${email || 'Benutzer'}` : 'Nicht angemeldet';
+    btnSignOut.disabled = !loggedIn;
+    btnSignIn.disabled = loggedIn;
+    btnSignUp.disabled = loggedIn;
+  }
 
   /**
    * Leeres Helden-Objekt (strukturierte Datenhaltung).
@@ -786,27 +843,105 @@
    * @param {boolean} withJson
    * @returns {Record<string, string>}
    */
-  function getSupabaseHeaders(key, withJson) {
+  function getSupabaseHeaders(key, withJson, accessToken) {
     const headers = {
       apikey: key,
     };
-    if (/^eyJ[A-Za-z0-9_-]+\./.test(key)) {
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    } else if (/^eyJ[A-Za-z0-9_-]+\./.test(key)) {
       headers.Authorization = `Bearer ${key}`;
     }
     if (withJson) headers['Content-Type'] = 'application/json';
     return headers;
   }
 
+  async function signUp() {
+    const email = (authEmail.value || '').trim();
+    const password = authPassword.value || '';
+    if (!email || !password) {
+      alert('Bitte E-Mail und Passwort eingeben.');
+      return;
+    }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: 'POST',
+        headers: getSupabaseHeaders(SUPABASE_KEY, true),
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.msg || data?.error_description || JSON.stringify(data));
+      if (data?.access_token) {
+        authSession = data;
+        saveAuthSession();
+        updateAuthUi();
+      }
+      alert('Registrierung erfolgreich. Falls nötig, E-Mail bestätigen und dann einloggen.');
+    } catch (e) {
+      console.error(e);
+      alert('Registrierung fehlgeschlagen: ' + (e.message || e));
+    }
+  }
+
+  async function signIn() {
+    const email = (authEmail.value || '').trim();
+    const password = authPassword.value || '';
+    if (!email || !password) {
+      alert('Bitte E-Mail und Passwort eingeben.');
+      return;
+    }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: getSupabaseHeaders(SUPABASE_KEY, true),
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.msg || data?.error_description || JSON.stringify(data));
+      authSession = data;
+      saveAuthSession();
+      updateAuthUi();
+      alert('Login erfolgreich.');
+    } catch (e) {
+      console.error(e);
+      alert('Login fehlgeschlagen: ' + (e.message || e));
+    }
+  }
+
+  async function signOut() {
+    const token = authSession?.access_token;
+    try {
+      if (token) {
+        await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+          method: 'POST',
+          headers: getSupabaseHeaders(SUPABASE_KEY, false, token),
+        });
+      }
+    } catch (e) {
+      console.warn('Logout-Request fehlgeschlagen:', e);
+    } finally {
+      authSession = null;
+      saveAuthSession();
+      updateAuthUi();
+    }
+  }
+
   async function saveCurrentHeroToSupabase() {
     const cfg = getSupabaseConfig();
     if (!cfg) {
-      alert('Bitte Supabase aktivieren und URL + anon key eintragen.');
+      alert('Supabase-Konfiguration fehlt.');
+      return;
+    }
+    const userId = getCurrentUserId();
+    if (!userId || !authSession?.access_token) {
+      alert('Bitte zuerst einloggen.');
       return;
     }
     saveFormToCurrent();
     const h = getCurrentHero();
     const payload = [{
       id: h.id,
+      user_id: userId,
       data: h,
       updated_at: new Date().toISOString(),
     }];
@@ -814,7 +949,7 @@
       const res = await fetch(`${cfg.url}/rest/v1/heroes?on_conflict=id`, {
         method: 'POST',
         headers: {
-          ...getSupabaseHeaders(cfg.key, true),
+          ...getSupabaseHeaders(cfg.key, true, authSession.access_token),
           Prefer: 'resolution=merge-duplicates,return=representation',
         },
         body: JSON.stringify(payload),
@@ -826,6 +961,8 @@
       const msg = String(e?.message || e || 'Unbekannter Fehler');
       if (/401|403|permission|jwt|apikey/i.test(msg)) {
         alert('Online-Speichern fehlgeschlagen: Zugriff verweigert. Prüfe anon key und RLS-Policies.');
+      } else if (/column .*user_id|user_id.*does not exist/i.test(msg)) {
+        alert('Online-Speichern fehlgeschlagen: In public.heroes fehlt die Spalte user_id.');
       } else if (/relation .*heroes|does not exist/i.test(msg)) {
         alert('Online-Speichern fehlgeschlagen: Tabelle public.heroes fehlt.');
       } else {
@@ -837,14 +974,19 @@
   async function loadHeroesFromSupabase() {
     const cfg = getSupabaseConfig();
     if (!cfg) {
-      alert('Bitte Supabase aktivieren und URL + anon key eintragen.');
+      alert('Supabase-Konfiguration fehlt.');
+      return;
+    }
+    const userId = getCurrentUserId();
+    if (!userId || !authSession?.access_token) {
+      alert('Bitte zuerst einloggen.');
       return;
     }
     try {
       const res = await fetch(
-        `${cfg.url}/rest/v1/heroes?select=id,data,updated_at&order=updated_at.desc`,
+        `${cfg.url}/rest/v1/heroes?select=id,data,updated_at,user_id&user_id=eq.${encodeURIComponent(userId)}&order=updated_at.desc`,
         {
-          headers: getSupabaseHeaders(cfg.key, false),
+          headers: getSupabaseHeaders(cfg.key, false, authSession.access_token),
         }
       );
       if (!res.ok) throw new Error(await res.text());
@@ -872,6 +1014,8 @@
       const msg = String(e?.message || e || 'Unbekannter Fehler');
       if (/401|403|permission|jwt|apikey/i.test(msg)) {
         alert('Online-Laden fehlgeschlagen: Zugriff verweigert. Prüfe anon key und RLS-Policies.');
+      } else if (/column .*user_id|user_id.*does not exist/i.test(msg)) {
+        alert('Online-Laden fehlgeschlagen: In public.heroes fehlt die Spalte user_id.');
       } else if (/relation .*heroes|does not exist/i.test(msg)) {
         alert('Online-Laden fehlgeschlagen: Tabelle public.heroes fehlt.');
       } else {
@@ -1049,6 +1193,9 @@
 
     el('btnSaveOnline').addEventListener('click', () => saveCurrentHeroToSupabase());
     el('btnLoadOnline').addEventListener('click', () => loadHeroesFromSupabase());
+    btnSignUp.addEventListener('click', () => signUp());
+    btnSignIn.addEventListener('click', () => signIn());
+    btnSignOut.addEventListener('click', () => signOut());
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !ocrModal.hidden) closeOcrModal();
@@ -1057,6 +1204,8 @@
 
   function init() {
     buildAttrInputs();
+    loadAuthSession();
+    updateAuthUi();
     characters = [createEmptyHero()];
     currentId = characters[0].id;
     wireEvents();
