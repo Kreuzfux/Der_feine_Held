@@ -69,7 +69,7 @@
         geschlecht: '',
         profession: '',
         stand: '',
-        gp: null,
+        sp: null,
         groesse: null,
         gewicht: '',
         alter: '',
@@ -115,7 +115,8 @@
       geschlecht: s.geschlecht ?? '',
       profession: s.profession ?? '',
       stand: s.stand ?? '',
-      gp: numOrNull(s.gp ?? raw.gp),
+      // Rückwärtskompatibel: alte Exporte mit gp werden als sp übernommen.
+      sp: numOrNull(s.sp ?? s.gp ?? raw.sp ?? raw.gp),
       groesse: numOrNull(s.groesse ?? raw.groesse),
       gewicht: s.gewicht ?? '',
       alter: s.alter ?? '',
@@ -338,7 +339,7 @@
     el('geschlecht').value = s.geschlecht || '';
     el('profession').value = s.profession || '';
     el('stand').value = s.stand || '';
-    el('gp').value = s.gp != null ? s.gp : '';
+    el('sp').value = s.sp != null ? s.sp : '';
     el('groesse').value = s.groesse != null ? s.groesse : '';
     el('gewicht').value = s.gewicht || '';
     el('alter').value = s.alter || '';
@@ -377,7 +378,7 @@
     h.stammdaten.geschlecht = el('geschlecht').value.trim();
     h.stammdaten.profession = el('profession').value.trim();
     h.stammdaten.stand = el('stand').value.trim();
-    h.stammdaten.gp = numOrNull(el('gp').value);
+    h.stammdaten.sp = numOrNull(el('sp').value);
     h.stammdaten.groesse = numOrNull(el('groesse').value);
     h.stammdaten.gewicht = el('gewicht').value.trim();
     h.stammdaten.alter = el('alter').value.trim();
