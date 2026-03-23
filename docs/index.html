@@ -24,10 +24,10 @@
       </div>
     </div>
     <div class="header-actions">
-      <input type="email" id="authEmail" class="api-url" placeholder="E-Mail" autocomplete="email" />
-      <input type="password" id="authPassword" class="api-url" placeholder="Passwort" autocomplete="current-password" />
-      <button type="button" id="btnSignUp" class="btn btn-ghost btn-sm">Registrieren</button>
-      <button type="button" id="btnSignIn" class="btn btn-primary btn-sm">Login</button>
+      <input type="email" id="authEmail" class="api-url auth-login-only" placeholder="E-Mail" autocomplete="email" />
+      <input type="password" id="authPassword" class="api-url auth-login-only" placeholder="Passwort" autocomplete="current-password" />
+      <button type="button" id="btnSignUp" class="btn btn-ghost btn-sm auth-login-only">Registrieren</button>
+      <button type="button" id="btnSignIn" class="btn btn-primary btn-sm auth-login-only">Login</button>
       <button type="button" id="btnSignOut" class="btn btn-ghost btn-sm">Logout</button>
       <span id="authStatus" class="tagline">Nicht angemeldet</span>
     </div>
@@ -69,8 +69,17 @@
       </section>
 
       <form id="heroForm" class="sheet-form" autocomplete="off">
+        <section class="panel panel-tabs" aria-label="Heldenbereiche">
+          <div class="tabs-row" role="tablist">
+            <button type="button" class="tab-btn is-active" data-tab-target="stammdaten" role="tab" aria-selected="true">Helden Stammdaten</button>
+            <button type="button" class="tab-btn" data-tab-target="talente" role="tab" aria-selected="false">Talent Daten</button>
+            <button type="button" class="tab-btn" data-tab-target="zauberei" role="tab" aria-selected="false">Zauberei Daten</button>
+            <button type="button" class="tab-btn" data-tab-target="runen" role="tab" aria-selected="false">Runen Daten</button>
+          </div>
+        </section>
+
         <!-- Helden Stammdaten -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel is-active" data-tab-content="stammdaten">
           <h2 class="panel-title sheet-title">Helden Stammdaten</h2>
           <div class="grid-2">
             <div class="field-group">
@@ -117,7 +126,7 @@
         </section>
 
         <!-- Eigenschaften -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel is-active" data-tab-content="stammdaten">
           <h2 class="panel-title sheet-title">Eigenschaften</h2>
           <div class="attrs-grid" id="attrsContainer">
             <!-- per JS: MU, KL, IN, CH, FF, GE, KK -->
@@ -126,7 +135,7 @@
         </section>
 
         <!-- Abgeleitete & Kampf -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel is-active" data-tab-content="stammdaten">
           <h2 class="panel-title sheet-title">Abgeleitete Werte &amp; Kampf</h2>
           <div class="derived-grid">
             <div class="derived-card">
@@ -168,7 +177,7 @@
         </section>
 
         <!-- LE / AE / AU -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel is-active" data-tab-content="stammdaten">
           <h2 class="panel-title sheet-title">Energien</h2>
           <div class="grid-3">
             <div class="field-group">
@@ -200,7 +209,7 @@
         </section>
 
         <!-- Talent Daten -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel" data-tab-content="talente">
           <div class="section-head">
             <h2 class="panel-title sheet-title">Talent Daten</h2>
             <button type="button" id="btnAddTalent" class="btn btn-ghost btn-sm">Zeile hinzufügen</button>
@@ -221,7 +230,7 @@
         </section>
 
         <!-- Zauberei Daten -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel" data-tab-content="zauberei">
           <div class="section-head">
             <h2 class="panel-title sheet-title">Zauberei Daten</h2>
             <button type="button" id="btnAddSpell" class="btn btn-ghost btn-sm">Zauber</button>
@@ -242,7 +251,7 @@
         </section>
 
         <!-- Runen Daten -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel" data-tab-content="runen">
           <div class="section-head">
             <h2 class="panel-title sheet-title">Runen Daten</h2>
             <button type="button" id="btnAddRune" class="btn btn-ghost btn-sm">Rune</button>
@@ -263,7 +272,7 @@
         </section>
 
         <!-- Inventar -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel is-active" data-tab-content="stammdaten">
           <div class="section-head">
             <h2 class="panel-title sheet-title">Inventar</h2>
             <button type="button" id="btnAddItem" class="btn btn-ghost btn-sm">Gegenstand</button>
@@ -284,7 +293,7 @@
         </section>
 
         <!-- Notizen -->
-        <section class="panel sheet-block">
+        <section class="panel sheet-block tab-panel is-active" data-tab-content="stammdaten">
           <h2 class="panel-title sheet-title">Notizen</h2>
           <div class="field-group">
             <label for="notizen" class="visually-hidden">Notizen</label>

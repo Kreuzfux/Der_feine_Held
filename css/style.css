@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Der feine Held – Styles im Stil eines klassischen DSA-Heldenbogens
  * Responsive, hoher Kontrast, Pergament-/Druckästhetik
  */
@@ -121,6 +121,10 @@ body {
   font-size: 0.85rem;
 }
 
+.auth-login-only[hidden] {
+  display: none !important;
+}
+
 /* Layout */
 .app-layout {
   display: grid;
@@ -235,6 +239,36 @@ body {
   background: linear-gradient(180deg, #faf4e6, var(--paper));
 }
 
+.panel-tabs {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 20;
+  padding: 0.6rem 0.8rem;
+}
+
+.tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.tab-btn {
+  border: 1px solid var(--border);
+  background: #fffef8;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.tab-btn.is-active {
+  background: linear-gradient(180deg, var(--accent-light), var(--accent));
+  color: #fff;
+  border-color: #4a1a10;
+}
+
 .panel-title {
   margin: 0 0 0.75rem;
   font-family: var(--font-serif);
@@ -252,6 +286,14 @@ body {
 
 .sheet-block {
   position: relative;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.is-active {
+  display: block;
 }
 
 .sheet-block::before {

@@ -38,6 +38,8 @@
 
   const characterList = el('characterList');
   const heroForm = el('heroForm');
+  const tabButtons = Array.from(document.querySelectorAll('[data-tab-target]'));
+  const tabPanels = Array.from(document.querySelectorAll('[data-tab-content]'));
   const imageUpload = el('imageUpload');
   const uploadPreview = el('uploadPreview');
   const uploadPlaceholder = el('uploadPlaceholder');
@@ -58,6 +60,7 @@
   const btnSignIn = el('btnSignIn');
   const btnSignOut = el('btnSignOut');
   const authStatus = el('authStatus');
+  const loginOnlyElements = Array.from(document.querySelectorAll('.auth-login-only'));
   const btnLoadAllOnline = el('btnLoadAllOnline');
   /** Letzte OCR-Zeile für Modal */
   let lastOcrMappings = [];
@@ -113,6 +116,9 @@
     btnSignOut.disabled = !loggedIn;
     btnSignIn.disabled = loggedIn;
     btnSignUp.disabled = loggedIn;
+    loginOnlyElements.forEach((node) => {
+      node.hidden = loggedIn;
+    });
     btnLoadAllOnline.hidden = !admin;
   }
 
@@ -878,6 +884,18 @@
     if (kind === 'ok') ocrStatus.classList.add('is-ok');
   }
 
+  function switchTab(tabKey) {
+    tabButtons.forEach((btn) => {
+      const active = btn.getAttribute('data-tab-target') === tabKey;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    tabPanels.forEach((panel) => {
+      const active = panel.getAttribute('data-tab-content') === tabKey;
+      panel.classList.toggle('is-active', active);
+    });
+  }
+
   async function runOcr() {
     if (!currentOcrImageDataUrls.length) {
       setOcrStatus('Bitte zuerst ein Bild oder PDF wählen.', 'error');
@@ -1229,6 +1247,13 @@
   // ——— Events ———
 
   function wireEvents() {
+    tabButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-tab-target');
+        if (key) switchTab(key);
+      });
+    });
+
     heroForm.addEventListener('input', () => {
       updateDerivedDisplay();
       renderValidation();
@@ -1418,6 +1443,7 @@
     renderCharacterList();
     updateDerivedDisplay();
     renderValidation();
+    switchTab('stammdaten');
   }
 
   if (document.readyState === 'loading') {
