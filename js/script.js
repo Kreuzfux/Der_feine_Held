@@ -879,10 +879,15 @@
       return;
     }
     try {
+      const redirectTo = `${window.location.origin}${window.location.pathname}`;
       const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: 'POST',
         headers: getSupabaseHeaders(SUPABASE_KEY, true),
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          options: { emailRedirectTo: redirectTo },
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.msg || data?.error_description || JSON.stringify(data));
