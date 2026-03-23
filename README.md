@@ -1,48 +1,34 @@
 # Der feine Held
 
-Webbasiertes Tool zur digitalen Erfassung von Heldenbögen für **Das Schwarze Auge 4.0** (reines HTML/CSS/Vanilla-JavaScript). Es unterstützt **mehrere Charaktere**, **JSON-Import/Export**, **Tesseract.js-OCR** für gescannte Bögen sowie **Supabase-Online-Speicherung**.
+Webbasiertes Tool zur digitalen Erfassung von Heldenbögen für **Das Schwarze Auge 4.0** (reines HTML/CSS/Vanilla JavaScript).
 
-> Hinweis: Kein offizielles Ulisses-/DSA-Produkt. Abgeleitete Werte und Plausibilitätsprüfungen orientieren sich an gängiger DSA-4.0-Praxis; Hausregeln können abweichen.
+> Hinweis: Kein offizielles DSA-/Ulisses-Produkt.
 
-## Funktionen
+## Aktueller Stand
 
-- **Heldenbogen-UI** im Stil eines klassischen DSA-Bogens (responsive)
-- **Eigenschaften** (MU–KK), **Kampfwerte**, **LE/AE/AU**, **Talente** (Tabelle), **Inventar**
-- **Abgeleitete Werte** (AT-/PA-/FK-/Zauber-Basis, MR-Basis, AU-Maximum, LE-Vorschlag Mensch)
-- **Validierung** mit Hinweisen (z. B. AT/PA vs. Basis, LE vs. Vorschlag)
-- **Bild-Upload** und **OCR** (Deutsch) mit **Korrekturdialog** vor Übernahme in Felder
-- **Mehrere Helden**, Auswahl in der Seitenleiste, Duplizieren/Löschen
-- **Import** von Helden über JSON-Datei
-- **Optional**: Supabase Online-Speicherung (REST über `heroes`-Tabelle)
+- Responsive Heldenbogen-Oberfläche (Stammdaten, Eigenschaften, Kampf, Energien, Talente, Inventar)
+- OCR für Bild/PDF mit Tesseract.js und Korrekturdialog
+- Mehrere Helden in der Session verwalten (Neu, Duplizieren, Löschen)
+- JSON-Import von Heldendaten
+- Online-Speichern/Laden über Supabase (`public.heroes`)
 
-## GitHub Pages (Frontend-only)
+## GitHub Pages Deployment
 
-Das statische Frontend liegt im **Repository-Root** (`index.html`, `css/`, `js/`, `data/`) und ist **ohne Backend** voll nutzbar (Speicherung im Browser).
+Die statische Seite liegt im Root (`index.html`, `css/`, `js/`, `data/`) und zusätzlich als Spiegel in `docs/`.
 
-### Variante A: Nur Branch (ohne Actions)
+### Branch-Deploy
 
-1. **Settings → Pages → Build and deployment**
-2. Quelle **Deploy from a branch**
-3. Branch **`main`**, Ordner **`/ (root)`** **oder** **`/docs`**
-   - **`/docs`:** Im Repo liegt ein **Spiegel** der gleichen Dateien wie im Root (für ältere Einstellungen, die noch auf `docs/` zeigen). **Empfehlung:** auf **`/ (root)`** umstellen und den Ordner `docs/` langfristig wieder entfernen, damit es nur **eine** Quelle gibt.
+1. Repository öffnen → **Settings → Pages**
+2. **Deploy from a branch**
+3. Branch `main` und Ordner `/(root)` oder `/docs`
 
-### Variante B: GitHub Actions (empfohlen, wenn der Standard-Workflow fehlschlägt)
+### Actions-Deploy
 
-1. **Settings → Pages → Build and deployment**
-2. Quelle **GitHub Actions**
-3. Im Repo ist [`.github/workflows/pages.yml`](.github/workflows/pages.yml) hinterlegt (ein Job: Checkout → Artifact → Deploy). Nach dem Push auf `main` läuft der Workflow automatisch.
-4. Beim **ersten** Deploy kann GitHub nach **Freigabe der Umgebung `github-pages`** fragen (einmalig bestätigen unter Actions / Environment).
+Alternativ **GitHub Actions** nutzen (Workflow in [`.github/workflows/pages.yml`](.github/workflows/pages.yml)).
 
-Die Datei **`.nojekyll`** im Root verhindert bei der **Branch-Variante**, dass die Site mit Jekyll gebaut wird. Die **Actions-Variante** lädt die Dateien unverändert hoch.
+## Supabase Setup
 
-Nach erfolgreichem Build: `https://<dein-name>.github.io/<repo-name>/` (exakte URL unter **Settings → Pages**).
-
-**OCR:** Tesseract.js wird per **jsDelivr-CDN** geladen; eine Internetverbindung ist für die erste Erkennung nötig.
-
-## Online-Speicher mit Supabase (empfohlen)
-
-1. In Supabase ein Projekt anlegen.
-2. SQL im Supabase SQL-Editor ausführen:
+Führe im Supabase SQL-Editor aus:
 
 ```sql
 create table if not exists public.heroes (
@@ -52,6 +38,10 @@ create table if not exists public.heroes (
 );
 
 alter table public.heroes enable row level security;
+
+drop policy if exists "anon can read heroes" on public.heroes;
+drop policy if exists "anon can write heroes" on public.heroes;
+drop policy if exists "anon can update heroes" on public.heroes;
 
 create policy "anon can read heroes"
 on public.heroes for select
@@ -70,38 +60,22 @@ using (true)
 with check (true);
 ```
 
-3. In der App oben:
-   - **Supabase Online-Speicher** aktivieren
-   - **Supabase URL** eintragen (`https://...supabase.co`)
-   - **anon key** eintragen
-4. Mit **Online speichern** den aktiven Helden hochladen, mit **Online laden** alle Online-Helden lokal übernehmen.
+Danach funktionieren die Buttons **Online speichern** und **Online laden**.
 
-Hinweis: Für produktive Nutzung solltest du Auth/Rollen härter absichern; die obigen Policies sind bewusst einfach für den schnellen Start.
+## Wichtiger Sicherheitshinweis
 
-## Beispiel-Held
-
-Die Datei [`data/example-hero.json`](data/example-hero.json) kann über **JSON importieren** geladen werden.
+Die Supabase-URL und der publishable Key sind aktuell **fest im Frontend-Code** hinterlegt (`js/script.js`). Das ist für einen Prototyp okay, aber nicht für sensible Produktionsdaten. Für härtere Sicherheit sollte Auth/RLS nutzerbezogen erweitert werden.
 
 ## Projektstruktur
 
-```
-index.html            → Einstieg (GitHub Pages aus Root)
+```txt
+index.html
 css/style.css
 js/script.js
 data/example-hero.json
-.nojekyll             → bei Branch-Deploy: Jekyll aus
-.github/workflows/pages.yml → optional: GitHub Actions Deploy
+docs/...
+.github/workflows/pages.yml
 README.md
 ```
-
-## Technik
-
-- **Frontend:** semantisches HTML, CSS-Variablen, kein Framework
-- **OCR:** [Tesseract.js v5](https://github.com/naptha/tesseract.js) (`deu`)
-- **Speicher:** Supabase (`heroes`-Tabelle) und optional JSON-Dateien
-
-## Lizenz
-
-Code dieses Repositories kannst du für private und eigene Projekte frei verwenden. DSA ist eine eingetragene Marke der Ulisses Spiele GmbH; dieses Projekt steht in keiner offiziellen Verbindung dazu.
 
 
