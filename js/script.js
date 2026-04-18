@@ -142,6 +142,11 @@
     return {
       id,
       version: 1,
+      /** OCR-Quelle (Scan/Foto/PDF als Data-URLs) */
+      ocr: {
+        /** @type {string[]} */
+        dataUrls: [],
+      },
       stammdaten: {
         name: '',
         rasse: '',
@@ -187,6 +192,16 @@
     const h = createEmptyHero();
     h.id = raw.id || h.id;
     h.version = raw.version || 1;
+    const rawOcr = raw.ocr || {};
+    const dataUrls = Array.isArray(rawOcr.dataUrls)
+      ? rawOcr.dataUrls
+      : (Array.isArray(raw.ocrDataUrls) ? raw.ocrDataUrls : []);
+    h.ocr = {
+      dataUrls: dataUrls
+        .filter((x) => typeof x === 'string' && x.length)
+        // Safety: keep size bounded (PDF pages can get big)
+        .slice(0, 10),
+    };
     const s = raw.stammdaten || {};
     h.stammdaten = {
       name: s.name ?? raw.name ?? '',
@@ -413,6 +428,26 @@
     renderSpellsTable(h.zauberei);
     renderRunesTable(h.runen);
     renderInventoryTable(h.inventar);
+
+    // OCR-Vorschau pro Held wiederherstellen
+    applyOcrSourceFromHero(h);
+  }
+
+  function applyOcrSourceFromHero(h) {
+    const dataUrls = Array.isArray(h?.ocr?.dataUrls) ? h.ocr.dataUrls : [];
+    currentOcrImageDataUrls = dataUrls;
+    if (dataUrls.length) {
+      uploadPreview.src = dataUrls[0];
+      uploadPreview.hidden = false;
+      uploadPlaceholder.hidden = true;
+      btnRunOcr.disabled = false;
+      setOcrStatus(`Bild/PDF aus Helddaten geladen: ${dataUrls.length} Seite(n) für OCR bereit.`, 'ok');
+    } else {
+      uploadPreview.hidden = true;
+      uploadPlaceholder.hidden = false;
+      btnRunOcr.disabled = true;
+    }
+    imageUpload.value = '';
   }
 
   function formToHero() {
@@ -1414,6 +1449,8 @@
       const file = imageUpload.files && imageUpload.files[0];
       if (!file) {
         currentOcrImageDataUrls = [];
+        const h = getCurrentHero();
+        if (h?.ocr) h.ocr.dataUrls = [];
         uploadPreview.hidden = true;
         uploadPlaceholder.hidden = false;
         btnRunOcr.disabled = true;
@@ -1427,6 +1464,8 @@
             setOcrStatus('PDF wird eingelesen …', '');
             const dataUrls = await renderPdfToImageDataUrls(reader.result);
             currentOcrImageDataUrls = dataUrls;
+            const h = getCurrentHero();
+            if (h?.ocr) h.ocr.dataUrls = dataUrls;
             if (!dataUrls.length) throw new Error('Keine PDF-Seiten renderbar.');
             uploadPreview.src = dataUrls[0];
             uploadPreview.hidden = false;
@@ -1436,6 +1475,8 @@
           } catch (e) {
             console.error(e);
             currentOcrImageDataUrls = [];
+            const h = getCurrentHero();
+            if (h?.ocr) h.ocr.dataUrls = [];
             uploadPreview.hidden = true;
             uploadPlaceholder.hidden = false;
             btnRunOcr.disabled = true;
@@ -1450,6 +1491,8 @@
       reader.onload = () => {
         const dataUrl = String(reader.result);
         currentOcrImageDataUrls = [dataUrl];
+        const h = getCurrentHero();
+        if (h?.ocr) h.ocr.dataUrls = [dataUrl];
         uploadPreview.src = dataUrl;
         uploadPreview.hidden = false;
         uploadPlaceholder.hidden = true;
@@ -1462,6 +1505,8 @@
     btnClearImage.addEventListener('click', () => {
       imageUpload.value = '';
       currentOcrImageDataUrls = [];
+      const h = getCurrentHero();
+      if (h?.ocr) h.ocr.dataUrls = [];
       uploadPreview.hidden = true;
       uploadPlaceholder.hidden = false;
       btnRunOcr.disabled = true;
